@@ -172,6 +172,67 @@ class Venue(ApiModel):
     updated_at: datetime = Field(default_factory=now_utc)
 
 
+class VenueSourceEvidence(ApiModel):
+    source_name: str
+    source_type: str
+    url: str
+    title: str
+    summary: str
+    confidence: int = Field(ge=0, le=100)
+
+
+class VenueMapAsset(ApiModel):
+    title: str
+    url: str
+    asset_type: str
+    notes: str | None = None
+
+
+class VenueNewsItem(ApiModel):
+    title: str
+    published_on: str | None = None
+    summary: str
+    url: str
+    source_name: str
+
+
+class VenueSwimIntelligence(ApiModel):
+    name: str
+    acreage: float | None = None
+    swim_count: int | None = None
+    stock_notes: str | None = None
+    feature_notes: str | None = None
+    depth_map_url: str | None = None
+    source_url: str
+
+
+class VenueWeatherIntelligence(ApiModel):
+    source: str
+    air_temp_c: float | None = None
+    pressure_hpa: float | None = None
+    wind_speed_mps: float | None = None
+    wind_direction_degrees: float | None = None
+    rainfall_mm: float | None = None
+    humidity_percent: float | None = None
+    data_gaps: list[str] = Field(default_factory=list)
+
+
+class VenueIntelligenceReport(ApiModel):
+    query: str
+    matched_key: str
+    confidence_score: int = Field(ge=0, le=100)
+    suggested_venue: Venue
+    summary: str
+    swims: list[VenueSwimIntelligence] = Field(default_factory=list)
+    map_assets: list[VenueMapAsset] = Field(default_factory=list)
+    news_items: list[VenueNewsItem] = Field(default_factory=list)
+    catch_reports: list[VenueNewsItem] = Field(default_factory=list)
+    source_evidence: list[VenueSourceEvidence] = Field(default_factory=list)
+    weather: VenueWeatherIntelligence | None = None
+    data_gaps: list[str] = Field(default_factory=list)
+    ethical_warnings: list[str] = Field(default_factory=list)
+
+
 class Swim(ApiModel):
     id: str = Field(default_factory=new_id)
     venue_id: str

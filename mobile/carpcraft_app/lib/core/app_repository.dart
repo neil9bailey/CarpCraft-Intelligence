@@ -9,7 +9,10 @@ class AppRepository {
   Future<List<MockVenue>> loadVenues() async {
     try {
       final items = await api.getList('/api/v1/venues');
-      final venues = items.whereType<Map<String, dynamic>>().map(MockVenue.fromJson).toList();
+      final venues = items
+          .whereType<Map<String, dynamic>>()
+          .map(MockVenue.fromJson)
+          .toList();
       return venues.isEmpty ? mockVenues : venues;
     } on CarpCraftApiException {
       return mockVenues;
@@ -22,16 +25,63 @@ class AppRepository {
     required String locationLabel,
     String? rulesNotes,
     String? stockNotes,
+    double? approximateLatitude,
+    double? approximateLongitude,
+    double? acreage,
   }) async {
-    final response = await api.postMap('/api/v1/venues', {
+    final body = <String, dynamic>{
       'name': name,
       'type': type.isEmpty ? 'unknown' : type,
-      'location_label': locationLabel.isEmpty ? 'Approximate location only' : locationLabel,
+      'location_label':
+          locationLabel.isEmpty ? 'Approximate location only' : locationLabel,
       'rules_notes': rulesNotes,
       'stock_notes': stockNotes,
       'privacy_level': 'private',
-    });
+    };
+    if (approximateLatitude != null && approximateLongitude != null) {
+      body['approximate_latitude'] = approximateLatitude;
+      body['approximate_longitude'] = approximateLongitude;
+    }
+    if (acreage != null) {
+      body['acreage'] = acreage;
+    }
+
+    final response = await api.postMap('/api/v1/venues', body);
     return MockVenue.fromJson(response);
+  }
+
+  Future<MockVenueIntelligence> lookupVenueIntelligence(String query) async {
+    try {
+      final encodedQuery = Uri.encodeQueryComponent(query);
+      final response = await api
+          .getMap('/api/v1/venues/intelligence/lookup?query=$encodedQuery');
+      return MockVenueIntelligence.fromJson(response);
+    } on CarpCraftApiException {
+      return fallbackVenueIntelligence(query);
+    }
+  }
+
+  Future<MockVenueIntelligence> importVenueIntelligence(String query) async {
+    try {
+      final encodedQuery = Uri.encodeQueryComponent(query);
+      final response = await api.postMap(
+          '/api/v1/venues/intelligence/import?query=$encodedQuery', {});
+      return MockVenueIntelligence.fromJson(response);
+    } on CarpCraftApiException {
+      final intelligence = fallbackVenueIntelligence(query);
+      final venue = intelligence.suggestedVenue;
+      await createVenue(
+        name: venue.name,
+        type: venue.type,
+        locationLabel: venue.locationLabel,
+        rulesNotes: venue.rulesNotes,
+        stockNotes: venue.stockNotes,
+        approximateLatitude: venue.approximateLatitude,
+        approximateLongitude: venue.approximateLongitude,
+        acreage: venue.acreage,
+      );
+      return intelligence;
+    }
   }
 
   Future<MockRecommendation> generateRecommendation() async {
