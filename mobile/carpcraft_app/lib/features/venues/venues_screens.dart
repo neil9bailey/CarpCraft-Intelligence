@@ -415,8 +415,19 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
                         '${report.weather!.pressureHpa!.toStringAsFixed(0)} hPa'),
               if (_hasVenueCoordinates)
                 const _InfoChip(icon: Icons.map_outlined, label: 'Map ready'),
+              if (report.externalPlace != null)
+                _InfoChip(
+                    icon: Icons.travel_explore_outlined,
+                    label:
+                        '${report.externalPlace!.sourceName} ${report.externalPlace!.confidence}%'),
             ],
           ),
+          if (report.externalPlace?.formattedAddress != null) ...[
+            const SizedBox(height: 12),
+            _CompactInfoLine(
+                icon: Icons.pin_drop_outlined,
+                text: report.externalPlace!.formattedAddress!),
+          ],
           if (report.weather?.dataGaps.isNotEmpty ?? false) ...[
             const SizedBox(height: 12),
             ...report.weather!.dataGaps.map((gap) =>
@@ -453,6 +464,26 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
       ),
       const SizedBox(height: 12),
       SectionCard(
+        title: 'Connectors',
+        icon: Icons.hub_outlined,
+        children: [
+          for (final connector in report.connectorStatuses) ...[
+            _SourceTile(
+              icon: _connectorIcon(connector.status),
+              title: connector.displayName,
+              subtitle: connector.summary,
+              trailing: connector.status,
+            ),
+            for (final gap in connector.dataGaps.take(2))
+              Padding(
+                padding: const EdgeInsets.only(left: 30),
+                child: _CompactInfoLine(icon: Icons.info_outline, text: gap),
+              ),
+          ],
+        ],
+      ),
+      const SizedBox(height: 12),
+      SectionCard(
         title: 'Maps and public updates',
         icon: Icons.public_outlined,
         children: [
@@ -460,7 +491,14 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
             _SourceTile(
               icon: Icons.map_outlined,
               title: asset.title,
-              subtitle: asset.notes ?? asset.url,
+              subtitle: [
+                asset.notes ?? asset.url,
+                asset.cacheAllowed
+                    ? 'Cache allowed'
+                    : 'Link only: ${asset.licenseStatus}',
+                if (asset.attribution != null)
+                  'Attribution: ${asset.attribution}',
+              ].join(' | '),
               trailing: asset.assetType,
             ),
           for (final item
@@ -482,9 +520,15 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
             _SourceTile(
               icon: Icons.link_outlined,
               title: '${source.sourceName} (${source.confidence}%)',
-              subtitle: source.summary,
+              subtitle: [
+                source.summary,
+                if (source.usageNotes != null) source.usageNotes,
+              ].whereType<String>().join(' | '),
               trailing: source.sourceType,
             ),
+          if (report.licensingNotes.isNotEmpty) const Divider(height: 22),
+          for (final note in report.licensingNotes)
+            _CompactInfoLine(icon: Icons.policy_outlined, text: note),
           if (report.dataGaps.isNotEmpty) const Divider(height: 22),
           for (final gap in report.dataGaps)
             _CompactInfoLine(icon: Icons.info_outline, text: gap),
@@ -494,6 +538,17 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
         ],
       ),
     ];
+  }
+
+  IconData _connectorIcon(String status) {
+    return switch (status) {
+      'active' => Icons.check_circle_outline,
+      'request_failed' => Icons.error_outline,
+      'blocked_by_policy' => Icons.block_outlined,
+      'partner_required' => Icons.handshake_outlined,
+      'manual_directory' => Icons.manage_search_outlined,
+      _ => Icons.info_outline,
+    };
   }
 }
 

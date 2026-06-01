@@ -6,6 +6,8 @@ from typing import Any
 from app.schemas.domain import (
     PrivacyLevel,
     Venue,
+    VenueConnectorStatus,
+    VenueExternalPlace,
     VenueIntelligenceReport,
     VenueMapAsset,
     VenueNewsItem,
@@ -14,6 +16,7 @@ from app.schemas.domain import (
     VenueType,
     VenueWeatherIntelligence,
 )
+from app.services.venue_source_connectors import VenueSourceConnector, default_venue_source_connectors
 from app.services.weather_service import WeatherLookupRequest, WeatherService
 
 
@@ -116,6 +119,9 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                     url="https://www.linear-fisheries.co.uk/index.cfm?fuseaction=main.map",
                     asset_type="official_site_map",
                     notes="Official complex map page; use as a source link until map image licensing is reviewed.",
+                    license_status="source_link_only_pending_permission",
+                    cache_allowed=False,
+                    attribution="Linear Fisheries",
                 )
             ],
             "catch_reports": [
@@ -244,6 +250,9 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                     url="https://www.embryoangling.org/wp-content/uploads/2020/07/Pettitts_Depth_Map_Website.jpg",
                     asset_type="official_depth_map",
                     notes="Official high-resolution/downloadable depth map linked from Embryo's Pettitt's Lake page.",
+                    license_status="source_link_only_pending_permission",
+                    cache_allowed=False,
+                    attribution="Embryo Angling",
                 )
             ],
             "news_items": [
@@ -291,26 +300,37 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
 
 
 class VenueIntelligenceService:
-    def __init__(self, weather_service: WeatherService | None = None) -> None:
+    def __init__(
+        self,
+        weather_service: WeatherService | None = None,
+        source_connectors: list[VenueSourceConnector] | None = None,
+    ) -> None:
         self.weather_service = weather_service or WeatherService()
+        self.source_connectors = source_connectors if source_connectors is not None else default_venue_source_connectors()
 
     def lookup(self, query: str) -> VenueIntelligenceReport:
         source_key, source_pack = self._match_pack(query)
         raw = source_pack.report
         venue = raw["suggested_venue"]
         weather = self._weather_for_venue(venue)
+        connector_statuses, connector_evidence, external_place = self._run_source_connectors(query, venue)
+        enriched_venue = self._venue_with_external_location(venue, external_place)
+        map_assets = list(raw.get("map_assets", []))
         return VenueIntelligenceReport(
             query=query,
             matched_key=source_key,
             confidence_score=88 if source_key == "linear-fisheries" else 92,
-            suggested_venue=venue,
+            suggested_venue=enriched_venue,
             summary=raw["summary"],
+            external_place=external_place,
             swims=list(raw.get("swims", [])),
-            map_assets=list(raw.get("map_assets", [])),
+            map_assets=map_assets,
             news_items=list(raw.get("news_items", [])),
             catch_reports=list(raw.get("catch_reports", [])),
-            source_evidence=list(raw.get("source_evidence", [])),
+            source_evidence=[*list(raw.get("source_evidence", [])), *connector_evidence],
+            connector_statuses=connector_statuses,
             weather=weather,
+            licensing_notes=self._licensing_notes(map_assets),
             data_gaps=list(raw.get("data_gaps", [])),
             ethical_warnings=[
                 "Never disturb spawning fish.",
@@ -325,6 +345,50 @@ class VenueIntelligenceService:
                 return key, pack
         supported = ", ".join(sorted(SOURCE_PACKS))
         raise ValueError(f"No grounded venue intelligence pack found for '{query}'. Supported test packs: {supported}.")
+
+    def _run_source_connectors(
+        self,
+        query: str,
+        venue: Venue,
+    ) -> tuple[list[VenueConnectorStatus], list[VenueSourceEvidence], VenueExternalPlace | None]:
+        statuses: list[VenueConnectorStatus] = []
+        evidence: list[VenueSourceEvidence] = []
+        external_place: VenueExternalPlace | None = None
+        for connector in self.source_connectors:
+            result = connector.enrich(query, venue)
+            statuses.append(result.status)
+            evidence.extend(result.evidence)
+            if external_place is None and result.external_place is not None:
+                external_place = result.external_place
+        return statuses, evidence, external_place
+
+    @staticmethod
+    def _venue_with_external_location(venue: Venue, external_place: VenueExternalPlace | None) -> Venue:
+        if external_place is None:
+            return venue
+        if venue.approximate_latitude is not None and venue.approximate_longitude is not None:
+            return venue
+        if external_place.latitude is None or external_place.longitude is None:
+            return venue
+        return venue.model_copy(
+            update={
+                "approximate_latitude": external_place.latitude,
+                "approximate_longitude": external_place.longitude,
+                "location_label": venue.location_label or external_place.formatted_address,
+            }
+        )
+
+    @staticmethod
+    def _licensing_notes(map_assets: list[VenueMapAsset]) -> list[str]:
+        if not map_assets:
+            return []
+        notes = [
+            "Public map and depth-map assets are stored as links only unless a licensing review marks them cacheable.",
+        ]
+        for asset in map_assets:
+            if not asset.cache_allowed:
+                notes.append(f"{asset.title}: cache blocked ({asset.license_status}).")
+        return notes
 
     def _weather_for_venue(self, venue: Venue) -> VenueWeatherIntelligence | None:
         if venue.approximate_latitude is None or venue.approximate_longitude is None:

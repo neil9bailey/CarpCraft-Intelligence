@@ -102,9 +102,11 @@ Production mobile auth is configured against the DIIAC tenant:
 
 For production backend auth set `APP_ENV=production`, `AUTH_MODE=entra`, `AUTH_REQUIRED=true` and keep `ENTRA_AUDIENCES` aligned with `.env.example`.
 
-Google Maps hybrid imagery is enabled when `GOOGLE_MAPS_API_KEY` is provided. Precise geolocation is requested only when the user taps the current-location control.
+Google Maps hybrid imagery is enabled in the Android app when `GOOGLE_MAPS_API_KEY` is provided. Precise geolocation is requested only when the user taps the current-location control. Backend venue enrichment can also use `GOOGLE_PLACES_API_KEY` for Google Places Text Search; keep this as a separate server/IP-restricted key rather than reusing the Android package-restricted Maps SDK key.
 
 Weather lookup uses two explicit provider adapters: Open-Meteo for open forecast data and Met Office DataHub Site-specific Global Spot data when `MET_OFFICE_API_KEY` is configured.
+
+Venue intelligence lookup starts with grounded fishery source packs and then reports connector status for Google Places, Catch/GoCatch, swimbooker and Facebook groups. Google Places can enrich map candidates when configured. Catch/GoCatch and swimbooker are partner/manual connectors until official API access is agreed. Facebook group ingestion is disabled by policy; use explicit user-provided links or fishery-owned public pages only. Public map and depth-map assets are stored as source links unless licensing review marks them cacheable.
 
 ## Run Tests
 

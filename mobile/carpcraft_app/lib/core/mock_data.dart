@@ -50,13 +50,16 @@ class MockVenueIntelligence {
     required this.confidenceScore,
     required this.suggestedVenue,
     required this.summary,
+    required this.connectorStatuses,
     required this.swims,
     required this.mapAssets,
     required this.newsItems,
     required this.catchReports,
     required this.sourceEvidence,
+    required this.licensingNotes,
     required this.dataGaps,
     required this.ethicalWarnings,
+    this.externalPlace,
     this.weather,
   });
 
@@ -65,11 +68,14 @@ class MockVenueIntelligence {
   final int confidenceScore;
   final MockVenue suggestedVenue;
   final String summary;
+  final MockVenueExternalPlace? externalPlace;
+  final List<MockVenueConnectorStatus> connectorStatuses;
   final List<MockVenueSwimIntelligence> swims;
   final List<MockVenueMapAsset> mapAssets;
   final List<MockVenueNewsItem> newsItems;
   final List<MockVenueNewsItem> catchReports;
   final List<MockVenueSourceEvidence> sourceEvidence;
+  final List<String> licensingNotes;
   final List<String> dataGaps;
   final List<String> ethicalWarnings;
   final MockVenueWeather? weather;
@@ -90,6 +96,12 @@ class MockVenueIntelligence {
               privacy: 'Private',
             ),
       summary: json['summary'] as String? ?? 'No grounded summary returned.',
+      externalPlace: json['external_place'] is Map<String, dynamic>
+          ? MockVenueExternalPlace.fromJson(
+              json['external_place'] as Map<String, dynamic>)
+          : null,
+      connectorStatuses: _modelList(
+          json['connector_statuses'], MockVenueConnectorStatus.fromJson),
       swims: _modelList(json['swims'], MockVenueSwimIntelligence.fromJson),
       mapAssets: _modelList(json['map_assets'], MockVenueMapAsset.fromJson),
       newsItems: _modelList(json['news_items'], MockVenueNewsItem.fromJson),
@@ -97,11 +109,79 @@ class MockVenueIntelligence {
           _modelList(json['catch_reports'], MockVenueNewsItem.fromJson),
       sourceEvidence:
           _modelList(json['source_evidence'], MockVenueSourceEvidence.fromJson),
+      licensingNotes: _stringList(json['licensing_notes']),
       dataGaps: _stringList(json['data_gaps']),
       ethicalWarnings: _stringList(json['ethical_warnings']),
       weather: json['weather'] is Map<String, dynamic>
           ? MockVenueWeather.fromJson(json['weather'] as Map<String, dynamic>)
           : null,
+    );
+  }
+}
+
+class MockVenueExternalPlace {
+  const MockVenueExternalPlace({
+    required this.sourceName,
+    required this.confidence,
+    this.placeId,
+    this.displayName,
+    this.formattedAddress,
+    this.latitude,
+    this.longitude,
+    this.googleMapsUri,
+    this.websiteUri,
+  });
+
+  final String sourceName;
+  final String? placeId;
+  final String? displayName;
+  final String? formattedAddress;
+  final double? latitude;
+  final double? longitude;
+  final String? googleMapsUri;
+  final String? websiteUri;
+  final int confidence;
+
+  factory MockVenueExternalPlace.fromJson(Map<String, dynamic> json) {
+    return MockVenueExternalPlace(
+      sourceName: json['source_name'] as String? ?? 'External place',
+      placeId: json['place_id'] as String?,
+      displayName: json['display_name'] as String?,
+      formattedAddress: json['formatted_address'] as String?,
+      latitude: _doubleValue(json['latitude']),
+      longitude: _doubleValue(json['longitude']),
+      googleMapsUri: json['google_maps_uri'] as String?,
+      websiteUri: json['website_uri'] as String?,
+      confidence: _intValue(json['confidence']),
+    );
+  }
+}
+
+class MockVenueConnectorStatus {
+  const MockVenueConnectorStatus({
+    required this.connectorName,
+    required this.displayName,
+    required this.status,
+    required this.summary,
+    required this.evidenceCount,
+    required this.dataGaps,
+  });
+
+  final String connectorName;
+  final String displayName;
+  final String status;
+  final String summary;
+  final int evidenceCount;
+  final List<String> dataGaps;
+
+  factory MockVenueConnectorStatus.fromJson(Map<String, dynamic> json) {
+    return MockVenueConnectorStatus(
+      connectorName: json['connector_name'] as String? ?? 'connector',
+      displayName: json['display_name'] as String? ?? 'Connector',
+      status: json['status'] as String? ?? 'unknown',
+      summary: json['summary'] as String? ?? '',
+      evidenceCount: _intValue(json['evidence_count']),
+      dataGaps: _stringList(json['data_gaps']),
     );
   }
 }
@@ -149,6 +229,8 @@ class MockVenueSourceEvidence {
     required this.title,
     required this.summary,
     required this.confidence,
+    this.attributionRequired = false,
+    this.usageNotes,
   });
 
   final String sourceName;
@@ -157,6 +239,8 @@ class MockVenueSourceEvidence {
   final String title;
   final String summary;
   final int confidence;
+  final bool attributionRequired;
+  final String? usageNotes;
 
   factory MockVenueSourceEvidence.fromJson(Map<String, dynamic> json) {
     return MockVenueSourceEvidence(
@@ -166,6 +250,8 @@ class MockVenueSourceEvidence {
       title: json['title'] as String? ?? 'Untitled source',
       summary: json['summary'] as String? ?? '',
       confidence: _intValue(json['confidence']),
+      attributionRequired: json['attribution_required'] as bool? ?? false,
+      usageNotes: json['usage_notes'] as String?,
     );
   }
 }
@@ -175,12 +261,18 @@ class MockVenueMapAsset {
     required this.title,
     required this.url,
     required this.assetType,
+    this.licenseStatus = 'link_only',
+    this.cacheAllowed = false,
+    this.attribution,
     this.notes,
   });
 
   final String title;
   final String url;
   final String assetType;
+  final String licenseStatus;
+  final bool cacheAllowed;
+  final String? attribution;
   final String? notes;
 
   factory MockVenueMapAsset.fromJson(Map<String, dynamic> json) {
@@ -188,6 +280,9 @@ class MockVenueMapAsset {
       title: json['title'] as String? ?? 'Map asset',
       url: json['url'] as String? ?? '',
       assetType: json['asset_type'] as String? ?? 'map',
+      licenseStatus: json['license_status'] as String? ?? 'link_only',
+      cacheAllowed: json['cache_allowed'] as bool? ?? false,
+      attribution: json['attribution'] as String?,
       notes: json['notes'] as String?,
     );
   }
@@ -340,6 +435,45 @@ const mockVenueIntelligenceLinear = MockVenueIntelligence(
   ),
   summary:
       'Official Linear Fisheries pages provide the venue, map, rules and latest-catch spine for a first test pack.',
+  externalPlace: null,
+  connectorStatuses: [
+    MockVenueConnectorStatus(
+      connectorName: 'google_places',
+      displayName: 'Google Places',
+      status: 'not_configured',
+      summary: 'Backend Places enrichment needs a server-side Places key.',
+      evidenceCount: 0,
+      dataGaps: ['Set GOOGLE_PLACES_API_KEY to test live Places enrichment.'],
+    ),
+    MockVenueConnectorStatus(
+      connectorName: 'catch_gocatch',
+      displayName: 'Catch / GoCatch',
+      status: 'partner_required',
+      summary:
+          'Partner/API access is required for live booking and catch-report import.',
+      evidenceCount: 1,
+      dataGaps: ['Use official partner access or fishery-approved links.'],
+    ),
+    MockVenueConnectorStatus(
+      connectorName: 'swimbooker',
+      displayName: 'swimbooker',
+      status: 'manual_directory',
+      summary:
+          'Manual source links are supported until an official API is configured.',
+      evidenceCount: 1,
+      dataGaps: ['No public Swimbooker API is configured.'],
+    ),
+    MockVenueConnectorStatus(
+      connectorName: 'facebook_groups',
+      displayName: 'Facebook groups',
+      status: 'blocked_by_policy',
+      summary: 'Group scraping/import is disabled.',
+      evidenceCount: 0,
+      dataGaps: [
+        'Use explicit user-provided links or fishery-owned public pages only.'
+      ],
+    ),
+  ],
   weather: MockVenueWeather(
       source: 'offline_demo',
       airTempC: 17.8,
@@ -368,6 +502,9 @@ const mockVenueIntelligenceLinear = MockVenueIntelligence(
       title: 'Linear Fisheries site map',
       url: 'https://www.linear-fisheries.co.uk/index.cfm?fuseaction=main.map',
       assetType: 'official_site_map',
+      licenseStatus: 'source_link_only_pending_permission',
+      cacheAllowed: false,
+      attribution: 'Linear Fisheries',
       notes: 'Source link only until map-image licensing is reviewed.',
     ),
   ],
@@ -408,6 +545,10 @@ const mockVenueIntelligenceLinear = MockVenueIntelligence(
       confidence: 75,
     ),
   ],
+  licensingNotes: [
+    'Public map assets are source links only until licensing review marks them cacheable.',
+    'Linear Fisheries site map: cache blocked.',
+  ],
   dataGaps: [
     'Swim boundaries and bathymetry are not normalized yet.',
     'Facebook/group data requires a permitted connector or user-provided links.',
@@ -439,6 +580,45 @@ const mockVenueIntelligenceEmbryo = MockVenueIntelligence(
   ),
   summary:
       'Official Embryo pages expose lake sizes, swim counts, stock notes and public depth-map links.',
+  externalPlace: null,
+  connectorStatuses: [
+    MockVenueConnectorStatus(
+      connectorName: 'google_places',
+      displayName: 'Google Places',
+      status: 'not_configured',
+      summary: 'Backend Places enrichment needs a server-side Places key.',
+      evidenceCount: 0,
+      dataGaps: ['Set GOOGLE_PLACES_API_KEY to test live Places enrichment.'],
+    ),
+    MockVenueConnectorStatus(
+      connectorName: 'catch_gocatch',
+      displayName: 'Catch / GoCatch',
+      status: 'partner_required',
+      summary:
+          'Partner/API access is required for live booking and catch-report import.',
+      evidenceCount: 1,
+      dataGaps: ['Use official partner access or fishery-approved links.'],
+    ),
+    MockVenueConnectorStatus(
+      connectorName: 'swimbooker',
+      displayName: 'swimbooker',
+      status: 'manual_directory',
+      summary:
+          'Manual source links are supported until an official API is configured.',
+      evidenceCount: 1,
+      dataGaps: ['No public Swimbooker API is configured.'],
+    ),
+    MockVenueConnectorStatus(
+      connectorName: 'facebook_groups',
+      displayName: 'Facebook groups',
+      status: 'blocked_by_policy',
+      summary: 'Group scraping/import is disabled.',
+      evidenceCount: 0,
+      dataGaps: [
+        'Use explicit user-provided links or fishery-owned public pages only.'
+      ],
+    ),
+  ],
   weather: MockVenueWeather(
       source: 'offline_demo',
       airTempC: 14.5,
@@ -474,6 +654,9 @@ const mockVenueIntelligenceEmbryo = MockVenueIntelligence(
       url:
           'https://www.embryoangling.org/wp-content/uploads/2020/07/Pettitts_Depth_Map_Website.jpg',
       assetType: 'official_depth_map',
+      licenseStatus: 'source_link_only_pending_permission',
+      cacheAllowed: false,
+      attribution: 'Embryo Angling',
       notes:
           'Linked from the official Embryo page; cache only after licensing review.',
     ),
@@ -513,6 +696,10 @@ const mockVenueIntelligenceEmbryo = MockVenueIntelligence(
       summary: 'Official page links a high-resolution depth map.',
       confidence: 95,
     ),
+  ],
+  licensingNotes: [
+    'Public map assets are source links only until licensing review marks them cacheable.',
+    "Pettitt's Lake depth map: cache blocked.",
   ],
   dataGaps: [
     'Facebook and Instagram updates should not be scraped without permission.',

@@ -38,6 +38,8 @@ The backend validates the JWT signature from Microsoft JWKS, issuer, audience, t
 - `GET /api/v1/blanks`
 - `POST /api/v1/recommendations/generate`
 - `POST /api/v1/recommendations/{id}/outcome`
+- `GET /api/v1/venues/intelligence/lookup`
+- `POST /api/v1/venues/intelligence/import`
 - `GET /api/v1/venues/{id}/lake-brain-summary`
 
 ## Route Status
@@ -45,6 +47,10 @@ The backend validates the JWT signature from Microsoft JWKS, issuer, audience, t
 Route data now persists through SQLAlchemy once migrations have been applied. Venues, swims, spots, sessions, rod sets, bait applications, observations, water readings, weather snapshots, bite events, catches, blanks, recommendations and recommendation outcomes use normalized tables. Secondary scaffold resources can continue through `json_resource_records` until promoted.
 
 `GET /api/v1/weather-snapshots/live/lookup` returns a multi-provider weather snapshot from configured provider adapters. Open-Meteo works with latitude and longitude without an API key. Met Office DataHub Site-specific Global Spot data is attempted with `dataSource=BD1` when `MET_OFFICE_API_KEY` is configured; otherwise the response explicitly reports that provider gap.
+
+`GET /api/v1/venues/intelligence/lookup?query=...` returns a grounded venue intelligence report for supported source packs. The report includes a private suggested venue, known public lakes/swims, map assets, source evidence, connector statuses, licensing notes, data gaps, ethical warnings and optional live weather. Google Places Text Search enrichment is attempted when `GOOGLE_PLACES_API_KEY` or `GOOGLE_MAPS_API_KEY` is configured. Catch/GoCatch and swimbooker are reported as partner/manual connectors until official API access is configured. Facebook group ingestion is reported as blocked; the product must not scrape groups.
+
+`POST /api/v1/venues/intelligence/import?query=...` creates or updates a private user-owned venue and starter swim records from the grounded report. Public map/depth assets remain source links only unless `cache_allowed` is explicitly true after licensing review.
 
 ## Recommendation Output Contract
 

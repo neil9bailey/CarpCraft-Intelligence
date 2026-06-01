@@ -12,8 +12,12 @@ This is an operational checklist, not legal advice.
 - Build debug APK for local testing.
 - Prepare Android App Bundle only after signing and release configuration are reviewed.
 - Configure Google Maps API key restrictions for package `com.carpcraft.intelligence`.
+- If venue enrichment will call Google Places from the backend, configure a separate `GOOGLE_PLACES_API_KEY` with Places API enabled and server/IP restrictions.
 - Configure Met Office DataHub access if authoritative UK weather cross-checks are required in the release environment.
 - Verify DIIAC Entra app registrations and consent before internal testing.
+- Verify Catch/GoCatch and swimbooker data access through official partner/API routes or manual fishery-approved links before importing availability or user catch reports.
+- Do not scrape Facebook groups. Use explicit user-provided links, fishery-owned public pages, or a future compliant connector only.
+- Keep public fishery map and depth-map images as source links until licensing review marks them cacheable.
 
 ## Play Console Preparation
 
@@ -47,7 +51,7 @@ The app requests location only from the Spot Map current-location action.
 - Android CMake 3.22.1 was installed into the existing Android SDK during debug APK build.
 - C: free space is critically low on the current machine and should be cleaned before release builds.
 - Debug APK verification path: `flutter build apk --debug`.
-- Known warning: current Android plugins still apply the Kotlin Gradle Plugin directly. This does not block the current debug build, but should be revisited before future Flutter upgrades.
+- Kotlin build migration: the app project should use Flutter's built-in Kotlin path where supported. Third-party plugin warnings must be rechecked after each `flutter pub upgrade`; if a plugin still applies the Kotlin Gradle Plugin directly, track it against the plugin's upstream migration.
 
 ## Draft Store Listing
 

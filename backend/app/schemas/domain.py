@@ -179,6 +179,8 @@ class VenueSourceEvidence(ApiModel):
     title: str
     summary: str
     confidence: int = Field(ge=0, le=100)
+    attribution_required: bool = False
+    usage_notes: str | None = None
 
 
 class VenueMapAsset(ApiModel):
@@ -186,6 +188,30 @@ class VenueMapAsset(ApiModel):
     url: str
     asset_type: str
     notes: str | None = None
+    license_status: str = "link_only"
+    cache_allowed: bool = False
+    attribution: str | None = None
+
+
+class VenueExternalPlace(ApiModel):
+    source_name: str
+    place_id: str | None = None
+    display_name: str | None = None
+    formatted_address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    google_maps_uri: str | None = None
+    website_uri: str | None = None
+    confidence: int = Field(default=0, ge=0, le=100)
+
+
+class VenueConnectorStatus(ApiModel):
+    connector_name: str
+    display_name: str
+    status: str
+    summary: str
+    evidence_count: int = Field(default=0, ge=0)
+    data_gaps: list[str] = Field(default_factory=list)
 
 
 class VenueNewsItem(ApiModel):
@@ -223,12 +249,15 @@ class VenueIntelligenceReport(ApiModel):
     confidence_score: int = Field(ge=0, le=100)
     suggested_venue: Venue
     summary: str
+    external_place: VenueExternalPlace | None = None
     swims: list[VenueSwimIntelligence] = Field(default_factory=list)
     map_assets: list[VenueMapAsset] = Field(default_factory=list)
     news_items: list[VenueNewsItem] = Field(default_factory=list)
     catch_reports: list[VenueNewsItem] = Field(default_factory=list)
     source_evidence: list[VenueSourceEvidence] = Field(default_factory=list)
+    connector_statuses: list[VenueConnectorStatus] = Field(default_factory=list)
     weather: VenueWeatherIntelligence | None = None
+    licensing_notes: list[str] = Field(default_factory=list)
     data_gaps: list[str] = Field(default_factory=list)
     ethical_warnings: list[str] = Field(default_factory=list)
 
