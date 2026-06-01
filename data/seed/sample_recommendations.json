@@ -1,0 +1,50 @@
+[
+  {
+    "id": "recommendation-missing-water-temp-cap",
+    "session_id": "session-spring-prespawn",
+    "location_score": 64,
+    "feeding_window_score": 52,
+    "presentation_fit_score": 48,
+    "oxygen_comfort_score": 70,
+    "pressure_risk_score": 48,
+    "confidence_score": 50,
+    "recommended_zone": "Area where shows were logged",
+    "recommended_depth_or_layer": "Bottom or low layer",
+    "recommended_tactic": "Move one rod onto the fresh shows and check presentation after liners.",
+    "recommended_baiting_level": "Light to moderate",
+    "explanation": "Confidence is capped because water temperature is missing and venue history is still small.",
+    "data_gaps": [
+      "Water temperature is missing.",
+      "Venue history has fewer than 10 sessions."
+    ],
+    "evidence_summary": [
+      "Shows were logged away from current rods.",
+      "Liners occurred without a take."
+    ],
+    "alternative_plan": "If no further signs appear, return to the highest-confidence mapped spot and keep bait tight."
+  },
+  {
+    "id": "recommendation-hot-still-weedy-oxygen-risk",
+    "session_id": "session-summer-oxygen-risk",
+    "location_score": 58,
+    "feeding_window_score": 44,
+    "presentation_fit_score": 55,
+    "oxygen_comfort_score": 32,
+    "pressure_risk_score": 72,
+    "confidence_score": 65,
+    "recommended_zone": "Inflow, shade or wind-touched water",
+    "recommended_depth_or_layer": "Upper layers or oxygenated margins",
+    "recommended_tactic": "Reduce baiting and prioritise oxygen comfort before location confidence.",
+    "recommended_baiting_level": "Low to moderate",
+    "explanation": "Hot, still and weedy conditions increase oxygen risk, and dissolved oxygen is missing.",
+    "data_gaps": [
+      "Dissolved oxygen has not been measured in hot conditions."
+    ],
+    "evidence_summary": [
+      "Air temperature is high.",
+      "Wind is light.",
+      "Weed density is high."
+    ],
+    "alternative_plan": "If signs appear in open water, test one mobile rod before adding bait."
+  }
+]

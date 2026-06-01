@@ -1,0 +1,54 @@
+[
+  {
+    "id": "venue-willow-mere",
+    "name": "Willow Mere",
+    "type": "lake",
+    "location_label": "Approximate Midlands location",
+    "privacy_level": "private",
+    "acreage": 18,
+    "max_depth_m": 4.8,
+    "average_depth_m": 2.1,
+    "stock_notes": "Mixed carp stock with several known older fish. Private notes only.",
+    "rules_notes": "No fishing near spawning areas. Barbless hooks during warmer months.",
+    "swims": [
+      {
+        "id": "swim-reed-corner",
+        "name": "Reed Corner",
+        "bank_aspect": "south-west",
+        "pressure_rating": 6,
+        "privacy_level": "private"
+      },
+      {
+        "id": "swim-dam-wall",
+        "name": "Dam Wall",
+        "bank_aspect": "north",
+        "pressure_rating": 8,
+        "privacy_level": "private"
+      }
+    ],
+    "spots": [
+      {
+        "id": "spot-reedline",
+        "swim_id": "swim-reed-corner",
+        "name": "Reedline shelf",
+        "distance_wraps": 11.5,
+        "depth_m": 1.6,
+        "substrate": "silt",
+        "feature_type": "reedline",
+        "weed_density": 7,
+        "confidence_level": 70
+      },
+      {
+        "id": "spot-gravel-bar",
+        "swim_id": "swim-dam-wall",
+        "name": "Gravel bar",
+        "distance_wraps": 18,
+        "depth_m": 2.8,
+        "substrate": "gravel",
+        "feature_type": "bar",
+        "weed_density": 2,
+        "confidence_level": 82
+      }
+    ]
+  }
+]

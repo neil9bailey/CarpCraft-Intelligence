@@ -1,0 +1,38 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+mobile/carpcraft_app/build/
+mobile/carpcraft_app/.metadata
+
+# Android / Gradle
+.gradle/
+local.properties
+hs_err_pid*.log
+*.jks
+*.keystore
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Generated local exports
+exports/
+tmp/

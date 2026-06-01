@@ -1,0 +1,111 @@
+[
+  {
+    "id": "session-spring-prespawn",
+    "venue_id": "venue-willow-mere",
+    "swim_id": "swim-reed-corner",
+    "session_type": "overnight",
+    "status": "ended",
+    "target_species": "carp",
+    "started_at": "2026-04-18T16:00:00Z",
+    "ended_at": "2026-04-19T09:00:00Z",
+    "angling_pressure_count": 4,
+    "water_readings": [
+      {
+        "water_temp_c": 12.4,
+        "dissolved_oxygen_mg_l": 8.2,
+        "depth_m": 1.4
+      }
+    ],
+    "observations": [
+      {
+        "observation_type": "show",
+        "confidence_level": 80,
+        "notes": "Two shows on the back of the wind away from current rods."
+      },
+      {
+        "observation_type": "liner",
+        "confidence_level": 65,
+        "notes": "Single liner on rod two, no take."
+      }
+    ],
+    "catches": [
+      {
+        "species": "carp",
+        "weight_lb": 23,
+        "weight_oz": 8,
+        "returned_safely": true,
+        "fish_condition_notes": "Strong condition, rested before return."
+      }
+    ],
+    "blank_intervals": [
+      {
+        "started_at": "2026-04-18T16:00:00Z",
+        "ended_at": "2026-04-19T03:30:00Z",
+        "rods_active_count": 3,
+        "notes": "No bites before moving one rod to showing fish."
+      }
+    ]
+  },
+  {
+    "id": "session-summer-oxygen-risk",
+    "venue_id": "venue-willow-mere",
+    "swim_id": "swim-reed-corner",
+    "session_type": "day",
+    "status": "ended",
+    "started_at": "2026-07-12T06:00:00Z",
+    "ended_at": "2026-07-12T18:00:00Z",
+    "angling_pressure_count": 6,
+    "weather": {
+      "air_temp_c": 28,
+      "wind_speed_mps": 0.8,
+      "cloud_cover_percent": 10
+    },
+    "water_readings": [
+      {
+        "water_temp_c": 22.1,
+        "dissolved_oxygen_mg_l": null,
+        "depth_m": 1.2
+      }
+    ],
+    "observations": [
+      {
+        "observation_type": "bird_activity",
+        "confidence_level": 60,
+        "notes": "Birds working around shaded inflow."
+      }
+    ],
+    "blank_intervals": [
+      {
+        "started_at": "2026-07-12T06:00:00Z",
+        "ended_at": "2026-07-12T18:00:00Z",
+        "rods_active_count": 3,
+        "notes": "Hot, still and weedy. No takes."
+      }
+    ]
+  },
+  {
+    "id": "session-winter-low-temp",
+    "venue_id": "venue-willow-mere",
+    "swim_id": "swim-dam-wall",
+    "session_type": "day",
+    "status": "ended",
+    "started_at": "2026-01-22T08:00:00Z",
+    "ended_at": "2026-01-22T16:00:00Z",
+    "angling_pressure_count": 1,
+    "water_readings": [
+      {
+        "water_temp_c": 5.8,
+        "dissolved_oxygen_mg_l": 9.1,
+        "depth_m": 2.9
+      }
+    ],
+    "blank_intervals": [
+      {
+        "started_at": "2026-01-22T08:00:00Z",
+        "ended_at": "2026-01-22T16:00:00Z",
+        "rods_active_count": 2,
+        "notes": "Low temperature. Single hookbaits only."
+      }
+    ]
+  }
+]

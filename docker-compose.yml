@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: carpcraft-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: carpcraft
+      POSTGRES_USER: carpcraft
+      POSTGRES_PASSWORD: change-me-local-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - carpcraft_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carpcraft -d carpcraft"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The pgvector image is used so future RAG embeddings can live beside
+  # private venue memory. PostGIS can be added via a custom image or migration
+  # once precise geospatial querying is implemented.
+
+volumes:
+  carpcraft_postgres_data:
