@@ -44,7 +44,7 @@ The backend validates the JWT signature from Microsoft JWKS, issuer, audience, t
 
 Route data now persists through SQLAlchemy once migrations have been applied. Venues, swims, spots, sessions, rod sets, bait applications, observations, water readings, weather snapshots, bite events, catches, blanks, recommendations and recommendation outcomes use normalized tables. Secondary scaffold resources can continue through `json_resource_records` until promoted.
 
-`GET /api/v1/weather-snapshots/live/lookup` returns a multi-provider weather snapshot from configured provider adapters. Open-Meteo works with latitude and longitude without an API key. Met Office DataHub is attempted when `MET_OFFICE_API_KEY` is configured; otherwise the response explicitly reports that provider gap.
+`GET /api/v1/weather-snapshots/live/lookup` returns a multi-provider weather snapshot from configured provider adapters. Open-Meteo works with latitude and longitude without an API key. Met Office DataHub Site-specific Global Spot data is attempted with `dataSource=BD1` when `MET_OFFICE_API_KEY` is configured; otherwise the response explicitly reports that provider gap.
 
 ## Recommendation Output Contract
 

@@ -76,6 +76,46 @@ class OpenMeteoWeatherProvider(WeatherProvider):
 class MetOfficeWeatherProvider(WeatherProvider):
     name = "met_office"
 
+    @staticmethod
+    def _normalize_response(payload: dict[str, Any]) -> tuple[dict[str, object], list[str]]:
+        features = payload.get("features")
+        if not isinstance(features, list) or not features:
+            return {}, ["Met Office response did not include forecast features."]
+        feature = features[0]
+        if not isinstance(feature, dict):
+            return {}, ["Met Office response feature shape was not recognised."]
+        properties = feature.get("properties")
+        if not isinstance(properties, dict):
+            return {}, ["Met Office response did not include forecast properties."]
+        time_series = properties.get("timeSeries")
+        if not isinstance(time_series, list) or not time_series:
+            return {}, ["Met Office response did not include a time series."]
+        current = time_series[0]
+        if not isinstance(current, dict):
+            return {}, ["Met Office time series item shape was not recognised."]
+
+        pressure = current.get("mslp")
+        pressure_hpa = pressure / 100 if isinstance(pressure, int | float) and pressure > 2000 else pressure
+        location = properties.get("location") if isinstance(properties.get("location"), dict) else {}
+        return (
+            {
+                "captured_at": current.get("time"),
+                "model_run_at": properties.get("modelRunDate"),
+                "source_location_name": location.get("name") if isinstance(location, dict) else None,
+                "request_point_distance_m": properties.get("requestPointDistance"),
+                "air_temp_c": current.get("screenTemperature"),
+                "pressure_hpa": pressure_hpa,
+                "wind_speed_mps": current.get("windSpeed10m"),
+                "wind_direction_degrees": current.get("windDirectionFrom10m"),
+                "rainfall_mm": current.get("totalPrecipAmount"),
+                "rainfall_rate_mm_h": current.get("precipitationRate"),
+                "cloud_cover_percent": current.get("totalCloudCover"),
+                "humidity_percent": current.get("screenRelativeHumidity"),
+                "weather_code": current.get("significantWeatherCode"),
+            },
+            [],
+        )
+
     def get_snapshot(self, request: WeatherLookupRequest) -> dict[str, object]:
         settings = get_settings()
         if not settings.met_office_api_key:
@@ -96,6 +136,7 @@ class MetOfficeWeatherProvider(WeatherProvider):
         response = httpx.get(
             f"{settings.met_office_base_url.rstrip('/')}/sitespecific/v0/point/hourly",
             params={
+                "dataSource": "BD1",
                 "latitude": request.latitude,
                 "longitude": request.longitude,
                 "includeLocationName": "true",
@@ -104,10 +145,11 @@ class MetOfficeWeatherProvider(WeatherProvider):
             timeout=8,
         )
         response.raise_for_status()
+        data, data_gaps = self._normalize_response(response.json())
         return {
             "source": self.name,
-            "data": response.json(),
-            "data_gaps": ["Met Office response shape is provider-native and needs product-specific normalization."],
+            "data": data,
+            "data_gaps": data_gaps,
         }
 
 

@@ -104,7 +104,7 @@ For production backend auth set `APP_ENV=production`, `AUTH_MODE=entra`, `AUTH_R
 
 Google Maps hybrid imagery is enabled when `GOOGLE_MAPS_API_KEY` is provided. Precise geolocation is requested only when the user taps the current-location control.
 
-Weather lookup uses two explicit provider adapters: Open-Meteo for open forecast data and Met Office DataHub for UK authoritative weather data when `MET_OFFICE_API_KEY` is configured.
+Weather lookup uses two explicit provider adapters: Open-Meteo for open forecast data and Met Office DataHub Site-specific Global Spot data when `MET_OFFICE_API_KEY` is configured.
 
 ## Run Tests
 
@@ -143,6 +143,6 @@ The legal/compliance documents in this repository are engineering drafts for pla
 2. Wire the Flutter app to the FastAPI API.
 3. Replace the remaining JSON bridge resources where query needs demand it.
 4. Add normalized persistence for user/account profile metadata once production auth is exercised end to end.
-5. Normalize Met Office provider responses for the subscribed DataHub product.
+5. Add server-side weather snapshot caching and daily Met Office call-budget protection.
 6. Add release signing and Play internal testing configuration.
 7. Add grounded AI explanations and RAG ingestion after deterministic rules are stable.
