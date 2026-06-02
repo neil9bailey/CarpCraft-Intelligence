@@ -119,6 +119,107 @@ class MockVenueIntelligence {
   }
 }
 
+class MockFisheryProfileSection {
+  const MockFisheryProfileSection({
+    required this.category,
+    required this.title,
+    required this.items,
+    required this.sourceUrls,
+    this.summary,
+    this.confidence = 0,
+  });
+
+  final String category;
+  final String title;
+  final String? summary;
+  final List<String> items;
+  final List<String> sourceUrls;
+  final int confidence;
+
+  factory MockFisheryProfileSection.fromJson(Map<String, dynamic> json) {
+    return MockFisheryProfileSection(
+      category: json['category'] as String? ?? 'general',
+      title: json['title'] as String? ?? 'Section',
+      summary: json['summary'] as String?,
+      items: _stringList(json['items']),
+      sourceUrls: _stringList(json['source_urls']),
+      confidence: _intValue(json['confidence']),
+    );
+  }
+}
+
+class MockFisheryProfile {
+  const MockFisheryProfile({
+    required this.id,
+    required this.displayName,
+    required this.slug,
+    required this.privacyLevel,
+    required this.confidenceScore,
+    required this.sections,
+    required this.lakes,
+    required this.sources,
+    required this.mapAssets,
+    this.locationLabel,
+    this.approximateLatitude,
+    this.approximateLongitude,
+    this.description,
+    this.costsNotes,
+    this.howToBookNotes,
+  });
+
+  final String id;
+  final String displayName;
+  final String slug;
+  final String? locationLabel;
+  final double? approximateLatitude;
+  final double? approximateLongitude;
+  final String? description;
+  final String? costsNotes;
+  final String? howToBookNotes;
+  final String privacyLevel;
+  final int confidenceScore;
+  final List<MockFisheryProfileSection> sections;
+  final List<MockVenueSwimIntelligence> lakes;
+  final List<MockVenueSourceEvidence> sources;
+  final List<MockVenueMapAsset> mapAssets;
+
+  factory MockFisheryProfile.fromJson(Map<String, dynamic> json) {
+    return MockFisheryProfile(
+      id: json['id'] as String? ?? 'fishery-profile',
+      displayName: json['display_name'] as String? ?? 'Fishery profile',
+      slug: json['slug'] as String? ?? 'fishery',
+      locationLabel: json['location_label'] as String?,
+      approximateLatitude: _doubleValue(json['approximate_latitude']),
+      approximateLongitude: _doubleValue(json['approximate_longitude']),
+      description: json['description'] as String?,
+      costsNotes: json['costs_notes'] as String?,
+      howToBookNotes: json['how_to_book_notes'] as String?,
+      privacyLevel: _titleCase(json['privacy_level'] as String? ?? 'private'),
+      confidenceScore: _intValue(json['confidence_score']),
+      sections:
+          _modelList(json['sections'], MockFisheryProfileSection.fromJson),
+      lakes: _modelList(json['lakes'], MockVenueSwimIntelligence.fromJson),
+      sources: _modelList(json['sources'], (source) {
+        return MockVenueSourceEvidence(
+          sourceName: source['source_name'] as String? ?? 'Source',
+          sourceType: source['source_kind'] as String? ?? 'source',
+          url: source['url'] as String? ?? '',
+          title: source['title'] as String? ?? 'Source',
+          summary: source['summary'] as String? ?? '',
+          confidence: _intValue(source['confidence']),
+          attributionRequired:
+              source['attribution_required'] as bool? ?? true,
+          usageNotes: source['data_rights_notes'] as String?,
+        );
+      }),
+      mapAssets: _modelList(json['map_assets'], MockVenueMapAsset.fromJson),
+    );
+  }
+
+  bool get hasCoordinates =>
+      approximateLatitude != null && approximateLongitude != null;
+}
+
 class MockVenueExternalPlace {
   const MockVenueExternalPlace({
     required this.sourceName,
@@ -542,6 +643,82 @@ const mockVenues = [
     sessionCount: 18,
     privacy: 'Private',
     type: 'pit',
+  ),
+];
+
+final mockFisheryProfiles = [
+  MockFisheryProfile(
+    id: 'fishery-linear-demo',
+    displayName: 'Linear Fisheries Oxford',
+    slug: 'linear-fisheries',
+    locationLabel: 'B4449 near Stanton Harcourt, OX29 7QF',
+    approximateLatitude: 51.74778,
+    approximateLongitude: -1.44076,
+    description:
+        'Offline demo profile. Seed the catalogue after signing in for live source-bound data.',
+    costsNotes:
+        'General day-ticket and selected online-booked waters. Verify current official prices.',
+    howToBookNotes: 'Selected waters use Catch/GoCatch; verify before travel.',
+    privacyLevel: 'Private',
+    confidenceScore: 88,
+    sections: [
+      const MockFisheryProfileSection(
+        category: 'access',
+        title: 'Access, opening times and gates',
+        items: [
+          '24-hour fishing with locked overnight gates.',
+          'Use the early-arrival car park during lock-up.',
+        ],
+        sourceUrls: ['https://www.linear-fisheries.co.uk/'],
+        confidence: 80,
+      ),
+      const MockFisheryProfileSection(
+        category: 'facilities',
+        title: 'Facilities',
+        items: ['Showers and toilets', 'Drinking water', 'Porta loos'],
+        sourceUrls: ['https://www.linear-fisheries.co.uk/'],
+        confidence: 75,
+      ),
+    ],
+    lakes: mockVenueIntelligenceLinear.swims,
+    sources: mockVenueIntelligenceLinear.sourceEvidence,
+    mapAssets: mockVenueIntelligenceLinear.mapAssets,
+  ),
+  MockFisheryProfile(
+    id: 'fishery-embryo-demo',
+    displayName: 'Embryo Norton Disney',
+    slug: 'embryo-norton-disney',
+    locationLabel: 'Swinderby Road / Butt Lane, Norton Disney, LN6 9QH',
+    approximateLatitude: 53.123845,
+    approximateLongitude: -0.675704,
+    description:
+        'Offline demo profile. Seed the catalogue after signing in for live source-bound data.',
+    costsNotes: 'Day and 24-hour tickets; verify current official prices.',
+    howToBookNotes: 'Report to the lodge on arrival.',
+    privacyLevel: 'Private',
+    confidenceScore: 92,
+    sections: [
+      const MockFisheryProfileSection(
+        category: 'access',
+        title: 'Access, opening times and gates',
+        items: [
+          'Report to the lodge on arrival.',
+          'Cashless card payment site.',
+        ],
+        sourceUrls: ['https://www.embryoangling.org/norton-disney/'],
+        confidence: 85,
+      ),
+      const MockFisheryProfileSection(
+        category: 'rules',
+        title: 'Rules and fish care',
+        items: ['Take litter home', 'Fishery-provided nets, mats and slings'],
+        sourceUrls: ['https://www.embryoangling.org/norton-disney/'],
+        confidence: 85,
+      ),
+    ],
+    lakes: mockVenueIntelligenceEmbryo.swims,
+    sources: mockVenueIntelligenceEmbryo.sourceEvidence,
+    mapAssets: mockVenueIntelligenceEmbryo.mapAssets,
   ),
 ];
 

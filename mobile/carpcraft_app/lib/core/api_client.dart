@@ -58,6 +58,15 @@ class CarpCraftApiClient {
         'Expected an object response from CarpCraft API.');
   }
 
+  Future<List<dynamic>> postList(String path, Map<String, dynamic> body) async {
+    final response = await _send('POST', path, body: body);
+    if (response is List<dynamic>) {
+      return response;
+    }
+    throw const CarpCraftApiException(
+        'Expected a list response from CarpCraft API.');
+  }
+
   Future<dynamic> _send(String method, String path,
       {Map<String, dynamic>? body}) async {
     final client = HttpClient();

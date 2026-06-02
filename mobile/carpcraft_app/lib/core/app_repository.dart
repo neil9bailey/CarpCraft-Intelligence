@@ -84,6 +84,50 @@ class AppRepository {
     }
   }
 
+  Future<List<MockFisheryProfile>> seedFisheryCatalogue() async {
+    try {
+      final response =
+          await api.postList('/api/v1/fishery-profiles/catalogue/seed', {});
+      final profiles = response
+          .whereType<Map<String, dynamic>>()
+          .map(MockFisheryProfile.fromJson)
+          .toList();
+      return profiles.isEmpty ? mockFisheryProfiles : profiles;
+    } on CarpCraftApiException {
+      return mockFisheryProfiles;
+    }
+  }
+
+  Future<List<MockFisheryProfile>> searchFisheryCatalogue(String query) async {
+    try {
+      final encodedQuery = Uri.encodeQueryComponent(query);
+      final response = await api
+          .getList('/api/v1/fishery-profiles/catalogue/search?query=$encodedQuery');
+      final profiles = response
+          .whereType<Map<String, dynamic>>()
+          .map(MockFisheryProfile.fromJson)
+          .toList();
+      return profiles;
+    } on CarpCraftApiException {
+      final normalized = query.trim().toLowerCase();
+      if (normalized.isEmpty) {
+        return mockFisheryProfiles;
+      }
+      return mockFisheryProfiles.where((profile) {
+        final haystack = [
+          profile.displayName,
+          profile.slug,
+          profile.locationLabel ?? '',
+          profile.description ?? '',
+          ...profile.lakes.map((lake) => lake.name),
+          ...profile.sections.map((section) => section.title),
+          ...profile.sections.expand((section) => section.items),
+        ].join(' ').toLowerCase();
+        return haystack.contains(normalized);
+      }).toList();
+    }
+  }
+
   Future<MockWeatherCondition> loadLiveWeatherConditions({
     double latitude = 51.74778,
     double longitude = -1.44076,

@@ -166,6 +166,30 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                     90,
                 ),
                 _source(
+                    "Linear Fisheries",
+                    "official_opening_times",
+                    "https://www.linear-fisheries.co.uk/index.cfm?fuseaction=main.openingtimes",
+                    "Official opening times and gate lock-up",
+                    "Confirms 24-hour fishing, overnight gate lock-up times and early-arrival car park guidance.",
+                    95,
+                ),
+                _source(
+                    "Linear Fisheries",
+                    "official_prices",
+                    "https://www.linear-fisheries.co.uk/index.cfm?fuseaction=main.prices",
+                    "Official prices and booking notes",
+                    "Lists general day-ticket pricing and GoCatch/Catch booking for selected waters.",
+                    95,
+                ),
+                _source(
+                    "Linear Fisheries",
+                    "official_facilities",
+                    "https://www.linear-fisheries.co.uk/index.cfm?fuseaction=main.showers",
+                    "Official showers and toilet block",
+                    "Describes the shower/toilet block, drinking-water tap, parking areas and porta loos.",
+                    90,
+                ),
+                _source(
                     "Catch / GoCatch",
                     "booking_directory",
                     "https://www.gocatch.fish/",
@@ -178,6 +202,37 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                 "Individual swim boundaries and detailed bathymetry are not normalized yet from official Linear map images.",
                 "Catch App and Facebook group data should be consumed through official APIs, user-provided links or explicit venue permission.",
                 "Do not infer current form from latest-catch reports without your own session evidence.",
+            ],
+            "costs_notes": (
+                "Official Linear prices page lists general day-ticket waters as pay-as-you-go and Manor Farm, Hunts Corner and Tar Farm "
+                "as online-bookable via GoCatch/Catch; always verify current prices before travelling."
+            ),
+            "how_to_book_notes": (
+                "General day-ticket waters are pay-as-you-go; selected Manor Farm, Hunts Corner and Tar Farm waters use online booking "
+                "through GoCatch/Catch according to Linear's official pricing and water pages."
+            ),
+            "access_notes": [
+                "Waters are described by Linear as open for 24-hour fishing, with gates locked overnight for security.",
+                "Anglers arriving during lock-up must wait in the early-arrival car park and must not block locked gates.",
+            ],
+            "opening_times_notes": ["Linear's official opening-times page says waters are open for 24-hour fishing."],
+            "gate_closure_notes": [
+                "Official opening-times page: March 1 to October 31 gates are locked at 9pm and opened again by 7:30am.",
+                "Official opening-times page: November 1 to end of February gates are locked at 7pm and opened again by 7:30am.",
+            ],
+            "parking_notes": [
+                "Use the early-arrival car park during lock-up times; do not park in front of or block locked gates.",
+                "The shower/toilet block page references parking areas between St Johns and Manor Farm plus short-term shower-block parking.",
+            ],
+            "facilities": [
+                "Shower and toilet block between St Johns and Manor Farm near the fishery office.",
+                "Drinking water tap outside the shower block.",
+                "Porta loos positioned around the complex.",
+            ],
+            "rules": [
+                "Do not leave rods unattended.",
+                "Do not park on grass, block gates, light fires, leave litter, or abuse bailiffs/staff.",
+                "Check lake-specific rules and safe-rig requirements before fishing.",
             ],
         },
     ),
@@ -282,6 +337,22 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                 ),
                 _source(
                     "Embryo Angling",
+                    "official_visit_guidance",
+                    "https://www.embryoangling.org/norton-disney-about-your-visit/",
+                    "Official Norton Disney visit guidance",
+                    "Confirms ticket prices, gate opening hours, lodge arrival, cashless payment and provided fish-care equipment.",
+                    95,
+                ),
+                _source(
+                    "Embryo Angling",
+                    "official_rules",
+                    "https://www.embryoangling.org/norton-disney-day-ticket-rules/",
+                    "Official Norton Disney day-ticket rules",
+                    "Source for Norton Disney rules and fish-care handling requirements.",
+                    95,
+                ),
+                _source(
+                    "Embryo Angling",
                     "official_depth_map",
                     "https://www.embryoangling.org/venue/pettitts-lake/",
                     "Pettitt's Lake depth-map page",
@@ -293,6 +364,35 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                 "Public Facebook and Instagram updates are referenced by Embryo but should not be scraped without permission or a proper connector.",
                 "Depth maps need licensing review before caching image copies inside the app.",
                 "Current catch reports should be separated from static stock lists before feeding recommendation logic.",
+            ],
+            "costs_notes": (
+                "Official Norton Disney visit page lists day and 24-hour ticket pricing plus concession pricing; verify the current page before booking."
+            ),
+            "how_to_book_notes": "Report to the lodge on arrival; use current Embryo booking/day-ticket instructions before travelling.",
+            "access_notes": [
+                "Anglers must report to the lodge on arrival where on-site bailiffs assist with tickets and information.",
+                "Norton Disney is described by Embryo as cashless, so payments are card only.",
+            ],
+            "opening_times_notes": [
+                "Official visit page says anglers can start sessions during main fishery gate opening hours."
+            ],
+            "gate_closure_notes": [
+                "Official visit page: November 1 to March 31 main fishery gate opening times are 8am to 5pm.",
+                "Official visit page: April 1 to October 31 main fishery gate opening times are 7am to 8pm.",
+            ],
+            "parking_notes": [
+                "Parking details need source review from the current official visit page or fishery team before normalization."
+            ],
+            "facilities": [
+                "On-site lodge for arrival, tickets and information.",
+                "Nets, mats and slings are provided for anglers according to the official visit page.",
+                "Cashless card payment site.",
+            ],
+            "rules": [
+                "Read rules before attending; rule breaches can lead to removal without refund.",
+                "Take all litter home.",
+                "Do not bring your own nets, mats or slings onto site.",
+                "Under-18 anglers must be accompanied by a responsible adult.",
             ],
         },
     ),

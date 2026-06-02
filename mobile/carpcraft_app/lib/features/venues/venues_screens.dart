@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app.dart';
 import '../../core/app_repository.dart';
@@ -30,18 +31,75 @@ class VenueListScreen extends StatefulWidget {
 
 class _VenueListScreenState extends State<VenueListScreen> {
   final AppRepository _repository = const AppRepository();
+  final TextEditingController _catalogueQueryController =
+      TextEditingController();
   late Future<List<MockVenue>> _venues;
+  late Future<List<MockFisheryProfile>> _catalogue;
+  bool _catalogueBusy = false;
 
   @override
   void initState() {
     super.initState();
     _venues = _repository.loadVenues();
+    _catalogue = _repository.searchFisheryCatalogue('');
+  }
+
+  @override
+  void dispose() {
+    _catalogueQueryController.dispose();
+    super.dispose();
   }
 
   void _reload() {
     setState(() {
       _venues = _repository.loadVenues();
     });
+  }
+
+  Future<void> _seedCatalogue() async {
+    setState(() {
+      _catalogueBusy = true;
+    });
+    try {
+      final profiles = await _repository.seedFisheryCatalogue();
+      if (mounted) {
+        setState(() {
+          _catalogue = Future.value(profiles);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Seeded ${profiles.length} fishery profiles.')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _catalogueBusy = false;
+        });
+      }
+    }
+  }
+
+  void _searchCatalogue() {
+    setState(() {
+      _catalogue =
+          _repository.searchFisheryCatalogue(_catalogueQueryController.text);
+    });
+  }
+
+  void _openFisheryMap(MockFisheryProfile profile) {
+    if (!profile.hasCoordinates) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No reviewed coordinates are attached yet.')));
+      return;
+    }
+    Navigator.pushNamed(
+      context,
+      AppRoutes.spotMap,
+      arguments: VenueMapArgs(
+        title: profile.displayName,
+        latitude: profile.approximateLatitude!,
+        longitude: profile.approximateLongitude!,
+      ),
+    );
   }
 
   @override
@@ -57,6 +115,70 @@ class _VenueListScreenState extends State<VenueListScreen> {
         child: const Icon(Icons.add),
       ),
       children: [
+        SectionCard(
+          title: 'Fishery catalogue',
+          icon: Icons.travel_explore_outlined,
+          children: [
+            TextField(
+              controller: _catalogueQueryController,
+              decoration: const InputDecoration(
+                  labelText: 'Search catalogued fisheries'),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _searchCatalogue(),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: _catalogueBusy ? null : _seedCatalogue,
+                  icon: _catalogueBusy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_awesome_outlined),
+                  label: const Text('Seed catalogue'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _searchCatalogue,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Search'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            FutureBuilder<List<MockFisheryProfile>>(
+              future: _catalogue,
+              builder: (context, snapshot) {
+                final profiles = snapshot.data ?? mockFisheryProfiles;
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: LinearProgressIndicator(),
+                  );
+                }
+                if (profiles.isEmpty) {
+                  return const _CompactInfoLine(
+                    icon: Icons.info_outline,
+                    text: 'No private fishery profiles match this search.',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final profile in profiles.take(5))
+                      _FisheryProfileCard(
+                        profile: profile,
+                        onMap: () => _openFisheryMap(profile),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         FutureBuilder<List<MockVenue>>(
           future: _venues,
           builder: (context, snapshot) {
@@ -502,6 +624,7 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
                   'Attribution: ${asset.attribution}',
               ].join(' | '),
               trailing: asset.assetType,
+              url: asset.url,
             ),
           for (final item
               in [...report.newsItems, ...report.catchReports].take(5))
@@ -510,6 +633,7 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
               title: item.title,
               subtitle: item.summary,
               trailing: item.sourceName,
+              url: item.url,
             ),
         ],
       ),
@@ -527,6 +651,7 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
                 if (source.usageNotes != null) source.usageNotes,
               ].whereType<String>().join(' | '),
               trailing: source.sourceType,
+              url: source.url,
             ),
           if (report.licensingNotes.isNotEmpty) const Divider(height: 22),
           for (final note in report.licensingNotes)
@@ -598,16 +723,18 @@ class _SourceTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.trailing,
+    this.url,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final String trailing;
+  final String? url;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,9 +761,150 @@ class _SourceTile extends StatelessWidget {
               style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
+          if (url != null && url!.isNotEmpty)
+            IconButton(
+              tooltip: 'Open source',
+              icon: const Icon(Icons.open_in_new, size: 18),
+              onPressed: () => _launchExternalUrl(url!),
+            ),
         ],
       ),
     );
+    if (url == null || url!.isEmpty) {
+      return content;
+    }
+    return InkWell(
+      onTap: () => _launchExternalUrl(url!),
+      borderRadius: BorderRadius.circular(8),
+      child: content,
+    );
+  }
+}
+
+class _FisheryProfileCard extends StatelessWidget {
+  const _FisheryProfileCard({
+    required this.profile,
+    required this.onMap,
+  });
+
+  final MockFisheryProfile profile;
+  final VoidCallback onMap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primarySections = profile.sections.take(4).toList();
+    final sourceUrl =
+        profile.sources.isEmpty ? null : profile.sources.first.url;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.water_outlined),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(profile.displayName,
+                        style: Theme.of(context).textTheme.titleMedium),
+                    if (profile.locationLabel != null)
+                      Text(profile.locationLabel!,
+                          style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              _InfoChip(
+                  icon: Icons.verified_outlined,
+                  label: '${profile.confidenceScore}%'),
+            ],
+          ),
+          if (profile.description != null) ...[
+            const SizedBox(height: 10),
+            Text(profile.description!),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoChip(
+                  icon: Icons.place_outlined,
+                  label: '${profile.lakes.length} lakes/swims'),
+              _InfoChip(
+                  icon: Icons.link_outlined,
+                  label: '${profile.sources.length} sources'),
+              if (profile.mapAssets.isNotEmpty)
+                _InfoChip(
+                    icon: Icons.map_outlined,
+                    label: '${profile.mapAssets.length} maps'),
+            ],
+          ),
+          if (primarySections.isNotEmpty) ...[
+            const Divider(height: 22),
+            for (final section in primarySections)
+              _CompactInfoLine(
+                icon: _sectionIcon(section.category),
+                text: [
+                  section.title,
+                  if (section.items.isNotEmpty) section.items.first,
+                ].join(' | '),
+              ),
+          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: profile.hasCoordinates ? onMap : null,
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('Map'),
+              ),
+              if (sourceUrl != null && sourceUrl.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: () => _launchExternalUrl(sourceUrl),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Source'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+IconData _sectionIcon(String category) {
+  return switch (category) {
+    'location' => Icons.pin_drop_outlined,
+    'access' => Icons.lock_open_outlined,
+    'parking' => Icons.local_parking_outlined,
+    'facilities' => Icons.wc_outlined,
+    'rules' => Icons.rule_folder_outlined,
+    'lakes' => Icons.water_outlined,
+    'booking' => Icons.confirmation_number_outlined,
+    _ => Icons.info_outline,
+  };
+}
+
+Future<void> _launchExternalUrl(String value) async {
+  final uri = Uri.tryParse(value);
+  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+    return;
+  }
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } on Exception {
+    return;
   }
 }
 
@@ -748,9 +1016,15 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
   static const String _googleMapsApiKey =
       String.fromEnvironment('GOOGLE_MAPS_API_KEY');
   static const LatLng _initialTarget = LatLng(52.3555, -1.1743);
+  GoogleMapController? _mapController;
   LatLng _mapTarget = _initialTarget;
   String _mapTitle = 'Selected spot';
   String _locationState = 'Location off';
+  MapType _mapType = MapType.hybrid;
+  double _zoom = 18;
+  double _bearing = 0;
+  double _tilt = 0;
+  CameraPosition? _lastCameraPosition;
   bool _loadedRouteArgs = false;
 
   @override
@@ -792,10 +1066,40 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     final position = await Geolocator.getCurrentPosition(
         locationSettings:
             const LocationSettings(accuracy: LocationAccuracy.high));
+    final target = LatLng(position.latitude, position.longitude);
     setState(() {
-      _mapTarget = LatLng(position.latitude, position.longitude);
+      _mapTarget = target;
       _locationState = 'Current location active';
     });
+    await _mapController?.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(target: target, zoom: _zoom, bearing: _bearing, tilt: _tilt),
+    ));
+  }
+
+  Future<void> _recenterMap() async {
+    await _mapController?.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(target: _mapTarget, zoom: _zoom, bearing: _bearing, tilt: _tilt),
+    ));
+  }
+
+  String get _mapsUrl =>
+      'https://www.google.com/maps/search/?api=1&query=${_mapTarget.latitude},${_mapTarget.longitude}';
+
+  String get _earthUrl =>
+      'https://earth.google.com/web/search/${_mapTarget.latitude},${_mapTarget.longitude}';
+
+  Future<void> _openMaps() => _launchExternalUrl(_mapsUrl);
+
+  Future<void> _openEarth() => _launchExternalUrl(_earthUrl);
+
+  String get _mapTypeLabel {
+    return switch (_mapType) {
+      MapType.normal => 'normal',
+      MapType.satellite => 'satellite',
+      MapType.terrain => 'terrain',
+      MapType.hybrid => 'hybrid',
+      _ => 'map',
+    };
   }
 
   @override
@@ -838,13 +1142,20 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
                   )
                 : GoogleMap(
                     initialCameraPosition:
-                        CameraPosition(target: _mapTarget, zoom: 18),
+                        CameraPosition(target: _mapTarget, zoom: _zoom),
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                    },
                     gestureRecognizers: {
                       Factory<OneSequenceGestureRecognizer>(
                         () => EagerGestureRecognizer(),
                       ),
                     },
-                    mapType: MapType.hybrid,
+                    mapType: _mapType,
+                    compassEnabled: true,
+                    mapToolbarEnabled: true,
+                    zoomControlsEnabled: true,
+                    minMaxZoomPreference: const MinMaxZoomPreference(5, 21),
                     myLocationButtonEnabled: false,
                     myLocationEnabled:
                         _locationState == 'Current location active',
@@ -860,9 +1171,16 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
                       ),
                     },
                     onCameraMove: (position) {
-                      _mapTarget = position.target;
+                      _lastCameraPosition = position;
                     },
                     onCameraIdle: () {
+                      final position = _lastCameraPosition;
+                      if (position != null) {
+                        _mapTarget = position.target;
+                        _zoom = position.zoom;
+                        _bearing = position.bearing;
+                        _tilt = position.tilt;
+                      }
                       setState(() {
                         _locationState =
                             'Map centred at ${_mapTarget.latitude.toStringAsFixed(5)}, ${_mapTarget.longitude.toStringAsFixed(5)}';
@@ -870,6 +1188,78 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
                     },
                   ),
           ),
+        ),
+        const SizedBox(height: 12),
+        SectionCard(
+          title: 'Map tools',
+          icon: Icons.tune_outlined,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<MapType>(
+                segments: const [
+                  ButtonSegment(
+                      value: MapType.hybrid,
+                      icon: Icon(Icons.satellite_alt_outlined),
+                      label: Text('Hybrid')),
+                  ButtonSegment(
+                      value: MapType.satellite,
+                      icon: Icon(Icons.public_outlined),
+                      label: Text('Satellite')),
+                  ButtonSegment(
+                      value: MapType.terrain,
+                      icon: Icon(Icons.terrain_outlined),
+                      label: Text('Terrain')),
+                  ButtonSegment(
+                      value: MapType.normal,
+                      icon: Icon(Icons.map_outlined),
+                      label: Text('Map')),
+                ],
+                selected: {_mapType},
+                onSelectionChanged: (selection) {
+                  setState(() {
+                    _mapType = selection.first;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _googleMapsApiKey.isEmpty ? null : _recenterMap,
+                  icon: const Icon(Icons.center_focus_strong_outlined),
+                  label: const Text('Recenter'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _openMaps,
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Google Maps'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _openEarth,
+                  icon: const Icon(Icons.public_outlined),
+                  label: const Text('Google Earth'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(icon: Icons.layers_outlined, label: _mapTypeLabel),
+                _InfoChip(
+                    icon: Icons.zoom_in_outlined,
+                    label: 'z${_zoom.toStringAsFixed(1)}'),
+                _InfoChip(
+                    icon: Icons.explore_outlined,
+                    label: '${_bearing.toStringAsFixed(0)} deg'),
+              ],
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         SectionCard(

@@ -131,6 +131,40 @@ def test_fishery_profile_import_is_private_and_source_bound(monkeypatch) -> None
         assert profile["confidence_score"] >= 80
         assert any("Catch" in option["platform_name"] for option in profile["booking_options"])
         assert any("Swimbooker" in gap or "swimbooker" in gap for gap in profile["data_gaps"])
+        assert {section["category"] for section in profile["sections"]} >= {
+            "location",
+            "access",
+            "rules",
+            "lakes",
+            "booking",
+        }
+        assert profile["gate_closure_notes"]
+        assert profile["facilities"]
+
+
+def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
+    monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
+
+    with sqlite_client() as client:
+        seed_response = client.post(
+            "/api/v1/fishery-profiles/catalogue/seed",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+        search_response = client.get(
+            "/api/v1/fishery-profiles/catalogue/search?query=norton",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+        other_user_response = client.get(
+            "/api/v1/fishery-profiles/catalogue/search",
+            headers={"X-CarpCraft-User-Id": "angler-b"},
+        )
+
+        assert seed_response.status_code == 201
+        assert len(seed_response.json()) >= 2
+        assert search_response.status_code == 200
+        assert [profile["display_name"] for profile in search_response.json()] == ["Embryo Norton Disney"]
+        assert other_user_response.status_code == 200
+        assert other_user_response.json() == []
 
 
 def test_weather_conditions_include_surface_temp_and_data_gaps() -> None:

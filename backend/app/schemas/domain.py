@@ -415,6 +415,15 @@ class FisheryLakeProfile(ApiModel):
     stock_notes: str | None = None
 
 
+class FisheryProfileSection(ApiModel):
+    category: str
+    title: str
+    summary: str | None = None
+    items: list[str] = Field(default_factory=list)
+    source_urls: list[str] = Field(default_factory=list)
+    confidence: int = Field(default=0, ge=0, le=100)
+
+
 class FisheryProfile(ApiModel):
     id: str = Field(default_factory=new_id)
     owner_user_id: str | None = None
@@ -427,8 +436,15 @@ class FisheryProfile(ApiModel):
     description: str | None = None
     costs_notes: str | None = None
     how_to_book_notes: str | None = None
+    access_notes: list[str] = Field(default_factory=list)
+    opening_times_notes: list[str] = Field(default_factory=list)
+    gate_closure_notes: list[str] = Field(default_factory=list)
+    parking_notes: list[str] = Field(default_factory=list)
+    facilities: list[str] = Field(default_factory=list)
+    rules: list[str] = Field(default_factory=list)
     booking_options: list[BookingOption] = Field(default_factory=list)
     lakes: list[FisheryLakeProfile] = Field(default_factory=list)
+    sections: list[FisheryProfileSection] = Field(default_factory=list)
     latest_news: list[VenueNewsItem] = Field(default_factory=list)
     catch_reports: list[VenueNewsItem] = Field(default_factory=list)
     map_assets: list[VenueMapAsset] = Field(default_factory=list)
