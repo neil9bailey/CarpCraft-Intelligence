@@ -26,14 +26,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final CarpCraftAuthService _authService = CarpCraftAuthService();
   late final Future<PackageInfo> _packageInfo;
   bool _signingIn = false;
-  bool _promptShown = false;
 
   @override
   void initState() {
     super.initState();
     _packageInfo = PackageInfo.fromPlatform();
     AuthState.instance.addListener(_authChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showSignInPrompt());
   }
 
   @override
@@ -45,39 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _authChanged() {
     if (mounted) {
       setState(() {});
-    }
-  }
-
-  Future<void> _showSignInPrompt() async {
-    if (_promptShown ||
-        !_authService.isConfigured ||
-        AuthState.instance.isSignedIn ||
-        !mounted) {
-      return;
-    }
-    _promptShown = true;
-    final shouldSignIn = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('DIIAC Entra sign-in'),
-        content: const Text(
-          'Sign in to use live venues, AnglingAI status, AI intelligence and private production data.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Later'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.login),
-            label: const Text('Sign in'),
-          ),
-        ],
-      ),
-    );
-    if (shouldSignIn == true) {
-      await _signIn();
     }
   }
 
@@ -136,9 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(
-                authState.isSignedIn
-                    ? Icons.check_circle_outline
-                    : Icons.login,
+                authState.isSignedIn ? Icons.check_circle_outline : Icons.login,
               ),
               title: Text(authState.isSignedIn
                   ? 'DIIAC Entra connected'
@@ -153,10 +116,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () => _authService.signOut(),
                     )
                   : FilledButton.icon(
-                      onPressed: _signingIn || !_authService.isConfigured
+                      onPressed: _signingIn ||
+                              authState.signInInProgress ||
+                              !_authService.isConfigured
                           ? null
                           : _signIn,
-                      icon: _signingIn
+                      icon: _signingIn || authState.signInInProgress
                           ? const SizedBox(
                               width: 16,
                               height: 16,
@@ -172,12 +137,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 text: authState.lastApiAuthMessage ??
                     'Production API sign-in is required.',
               ),
+            _DashboardLine(
+              icon: authState.isSignedIn
+                  ? Icons.check_circle_outline
+                  : Icons.info_outline,
+              text: authState.authStatusMessage,
+            ),
             FutureBuilder<PackageInfo>(
               future: _packageInfo,
               builder: (context, snapshot) {
                 final info = snapshot.data;
-                final version =
-                    info == null ? 'loading' : '${info.version}+${info.buildNumber}';
+                final version = info == null
+                    ? 'loading'
+                    : '${info.version}+${info.buildNumber}';
                 return _DashboardLine(
                   icon: Icons.tag_outlined,
                   text: 'Build $_buildChannel $_buildSha | App $version',
@@ -193,19 +165,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             SizedBox(
               width: 166,
-              child: MetricTile(label: 'Rod-hours', value: '18.5', icon: Icons.schedule),
+              child: MetricTile(
+                  label: 'Rod-hours', value: '18.5', icon: Icons.schedule),
             ),
             SizedBox(
               width: 166,
-              child: MetricTile(label: 'Blanks logged', value: '3', icon: Icons.hourglass_empty),
+              child: MetricTile(
+                  label: 'Blanks logged',
+                  value: '3',
+                  icon: Icons.hourglass_empty),
             ),
             SizedBox(
               width: 166,
-              child: MetricTile(label: 'Confidence', value: '50%', icon: Icons.verified_outlined),
+              child: MetricTile(
+                  label: 'Confidence',
+                  value: '50%',
+                  icon: Icons.verified_outlined),
             ),
             SizedBox(
               width: 166,
-              child: MetricTile(label: 'Data gaps', value: '2', icon: Icons.error_outline),
+              child: MetricTile(
+                  label: 'Data gaps', value: '2', icon: Icons.error_outline),
             ),
           ],
         ),
@@ -214,10 +194,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: 'Tonight',
           icon: Icons.nights_stay_outlined,
           children: [
-            const Text('Log water temperature before trusting pattern confidence.'),
+            const Text(
+                'Log water temperature before trusting pattern confidence.'),
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.startSession),
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.startSession),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start session'),
             ),
@@ -228,10 +210,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: 'Latest recommendation',
           icon: Icons.tips_and_updates_outlined,
           children: [
-            const Text('Windward reedline, light to moderate baiting, one mobile rod.'),
+            const Text(
+                'Windward reedline, light to moderate baiting, one mobile rod.'),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.recommendation),
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.recommendation),
               icon: const Icon(Icons.open_in_new),
               label: const Text('Open card'),
             ),

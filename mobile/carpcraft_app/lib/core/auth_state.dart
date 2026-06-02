@@ -8,6 +8,8 @@ class AuthState extends ChangeNotifier {
   String? accessToken;
   String? accountLabel;
   bool apiAuthRequired = false;
+  bool signInInProgress = false;
+  String authStatusMessage = 'Not signed in.';
   String? lastApiAuthMessage;
 
   bool get isSignedIn => accessToken != null && accessToken!.isNotEmpty;
@@ -16,6 +18,8 @@ class AuthState extends ChangeNotifier {
     accessToken = token;
     accountLabel = label;
     apiAuthRequired = false;
+    signInInProgress = false;
+    authStatusMessage = 'DIIAC Entra sign-in complete.';
     lastApiAuthMessage = null;
     notifyListeners();
   }
@@ -24,6 +28,8 @@ class AuthState extends ChangeNotifier {
     accessToken = null;
     accountLabel = null;
     apiAuthRequired = false;
+    signInInProgress = false;
+    authStatusMessage = 'Signed out.';
     lastApiAuthMessage = null;
     notifyListeners();
   }
@@ -31,6 +37,19 @@ class AuthState extends ChangeNotifier {
   void markApiAuthRequired(String message) {
     apiAuthRequired = true;
     lastApiAuthMessage = message;
+    authStatusMessage = message;
+    notifyListeners();
+  }
+
+  void markSignInStarted() {
+    signInInProgress = true;
+    authStatusMessage = 'Opening Microsoft sign-in...';
+    notifyListeners();
+  }
+
+  void markSignInFailed(String message) {
+    signInInProgress = false;
+    authStatusMessage = message;
     notifyListeners();
   }
 }

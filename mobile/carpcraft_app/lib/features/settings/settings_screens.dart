@@ -29,7 +29,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
       }
     } finally {
       if (mounted) {
@@ -76,6 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final signedIn = AuthState.instance.isSignedIn;
+    final signingIn = AuthState.instance.signInInProgress;
     final settings = AppSettingsState.instance;
     return CarpScaffold(
       title: 'Settings',
@@ -86,9 +88,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(signedIn ? Icons.verified_user_outlined : Icons.login),
-              title: Text(signedIn ? 'DIIAC Entra connected' : 'DIIAC Entra sign-in'),
-              subtitle: Text(signedIn ? 'API requests include a bearer token.' : 'Production auth uses Microsoft Entra ID.'),
+              leading:
+                  Icon(signedIn ? Icons.verified_user_outlined : Icons.login),
+              title: Text(
+                  signedIn ? 'DIIAC Entra connected' : 'DIIAC Entra sign-in'),
+              subtitle: Text(signedIn
+                  ? 'API requests include a bearer token.'
+                  : 'Production auth uses Microsoft Entra ID.'),
               trailing: signedIn
                   ? IconButton(
                       tooltip: 'Sign out',
@@ -99,12 +105,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     )
                   : FilledButton.icon(
-                      onPressed: _signingIn || !_authService.isConfigured ? null : _signIn,
-                      icon: _signingIn
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      onPressed:
+                          _signingIn || signingIn || !_authService.isConfigured
+                              ? null
+                              : _signIn,
+                      icon: _signingIn || signingIn
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.login),
                       label: const Text('Sign in'),
                     ),
+            ),
+            _SettingsLine(
+              icon: signedIn ? Icons.check_circle_outline : Icons.info_outline,
+              text: AuthState.instance.authStatusMessage,
             ),
           ],
         ),
@@ -145,6 +161,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+class _SettingsLine extends StatelessWidget {
+  const _SettingsLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
 class PrivacyControlsScreen extends StatelessWidget {
   const PrivacyControlsScreen({super.key});
 
@@ -157,7 +195,8 @@ class PrivacyControlsScreen extends StatelessWidget {
           title: 'Sensitive data',
           icon: Icons.lock_outline,
           children: [
-            Text('Venues, swims, spots, catch locations, photos and target fish notes stay private by default.'),
+            Text(
+                'Venues, swims, spots, catch locations, photos and target fish notes stay private by default.'),
           ],
         ),
         const SizedBox(height: 12),

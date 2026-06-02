@@ -3,7 +3,8 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 import 'auth_state.dart';
 
 class CarpCraftAuthService {
-  CarpCraftAuthService({FlutterAppAuth? appAuth}) : _appAuth = appAuth ?? const FlutterAppAuth();
+  CarpCraftAuthService({FlutterAppAuth? appAuth})
+      : _appAuth = appAuth ?? const FlutterAppAuth();
 
   static const tenantId = String.fromEnvironment(
     'ENTRA_TENANT_ID',
@@ -22,22 +23,31 @@ class CarpCraftAuthService {
 
   Future<void> signIn() async {
     if (!isConfigured) {
-      throw const AuthConfigurationException('ENTRA_CLIENT_ID and ENTRA_API_SCOPE must be configured.');
+      throw const AuthConfigurationException(
+          'ENTRA_CLIENT_ID and ENTRA_API_SCOPE must be configured.');
     }
-    final result = await _appAuth.authorizeAndExchangeCode(
-      AuthorizationTokenRequest(
-        clientId,
-        redirectUrl,
-        discoveryUrl: 'https://login.microsoftonline.com/$tenantId/v2.0/.well-known/openid-configuration',
-        scopes: ['openid', 'profile', 'offline_access', apiScope],
-        promptValues: ['select_account'],
-      ),
-    );
-    final token = result.accessToken;
-    if (token == null || token.isEmpty) {
-      throw const AuthConfigurationException('Microsoft Entra did not return an access token.');
+    AuthState.instance.markSignInStarted();
+    try {
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          clientId,
+          redirectUrl,
+          discoveryUrl:
+              'https://login.microsoftonline.com/$tenantId/v2.0/.well-known/openid-configuration',
+          scopes: ['openid', 'profile', apiScope],
+        ),
+      );
+      final token = result.accessToken;
+      if (token == null || token.isEmpty) {
+        throw const AuthConfigurationException(
+            'Microsoft Entra did not return an access token.');
+      }
+      AuthState.instance.setSession(
+          token: token, label: result.idToken != null ? 'DIIAC account' : null);
+    } catch (error) {
+      AuthState.instance.markSignInFailed('Microsoft sign-in failed: $error');
+      rethrow;
     }
-    AuthState.instance.setSession(token: token, label: result.idToken != null ? 'DIIAC account' : null);
   }
 
   void signOut() {
