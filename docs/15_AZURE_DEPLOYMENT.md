@@ -20,6 +20,7 @@ The Bicep template creates:
 - User-assigned managed identity for the API
 - Key Vault with RBAC and soft delete/purge protection
 - PostgreSQL Flexible Server and `carpcraft` database
+- PostgreSQL `vector` extension allow-list for future RAG/embedding storage
 - Private blob container named `captures`
 - Log Analytics workspace
 
