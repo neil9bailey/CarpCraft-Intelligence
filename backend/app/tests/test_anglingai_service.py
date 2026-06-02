@@ -21,6 +21,18 @@ def test_anglingai_status_reports_missing_key(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+def test_anglingai_status_treats_placeholder_key_as_missing(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "replace-in-key-vault")
+
+    status = AnglingAIService().status()
+
+    assert status.configured is False
+    assert "No AnglingAI API key is configured." in status.data_gaps
+
+    get_settings.cache_clear()
+
+
 def test_anglingai_venue_research_uses_bearer_token(monkeypatch) -> None:
     get_settings.cache_clear()
     monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")

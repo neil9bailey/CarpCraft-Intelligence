@@ -77,6 +77,10 @@ class MetOfficeWeatherProvider(WeatherProvider):
     name = "met_office"
 
     @staticmethod
+    def _is_configured(value: str | None) -> bool:
+        return bool(value and value not in {"replace-in-key-vault", "not-configured"})
+
+    @staticmethod
     def _normalize_response(payload: dict[str, Any]) -> tuple[dict[str, object], list[str]]:
         features = payload.get("features")
         if not isinstance(features, list) or not features:
@@ -118,7 +122,7 @@ class MetOfficeWeatherProvider(WeatherProvider):
 
     def get_snapshot(self, request: WeatherLookupRequest) -> dict[str, object]:
         settings = get_settings()
-        if not settings.met_office_api_key:
+        if not self._is_configured(settings.met_office_api_key):
             return {
                 "source": self.name,
                 "data": {},

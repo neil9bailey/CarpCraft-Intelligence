@@ -2,17 +2,12 @@ param(
     [string]$SubscriptionId = "9ae9da49-de67-443b-af55-ce9db33ed8f4",
     [string]$Location = "uksouth",
     [string]$ResourceGroupName = "rg-carpcraft-prod",
-    [string]$BackendImage,
-    [string]$AcrLoginServer = "",
+    [string]$BackendImage = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
     [string]$PostgresAdminPassword = $env:CARPCRAFT_POSTGRES_ADMIN_PASSWORD,
     [switch]$Deploy
 )
 
 $ErrorActionPreference = "Stop"
-
-if (-not $BackendImage) {
-    throw "BackendImage is required, for example diiac.azurecr.io/carpcraft-backend:latest"
-}
 
 if (-not $PostgresAdminPassword) {
     throw "Set CARPCRAFT_POSTGRES_ADMIN_PASSWORD or pass -PostgresAdminPassword."
@@ -40,7 +35,6 @@ $commonArgs = @(
     "--parameters",
     "location=$Location",
     "backendImage=$BackendImage",
-    "acrLoginServer=$AcrLoginServer",
     "databaseAdministratorPassword=$PostgresAdminPassword"
 )
 

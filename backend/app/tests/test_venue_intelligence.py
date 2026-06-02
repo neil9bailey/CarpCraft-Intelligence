@@ -169,6 +169,21 @@ def test_google_places_connector_normalizes_text_search(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+def test_google_places_connector_treats_placeholder_key_as_missing(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("GOOGLE_PLACES_API_KEY", "replace-in-key-vault")
+    monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "")
+
+    venue = _test_service().lookup("Embryo Norton Disney").suggested_venue
+    result = GooglePlacesConnector().enrich("Embryo Norton Disney", venue)
+
+    assert result.status.status == "not_configured"
+    assert result.external_place is None
+    assert "GOOGLE_PLACES_API_KEY" in result.status.data_gaps[0]
+
+    get_settings.cache_clear()
+
+
 def test_default_connectors_report_partner_and_policy_gaps() -> None:
     report = VenueIntelligenceService(
         weather_service=WeatherService(providers=[_StaticWeatherProvider()]),

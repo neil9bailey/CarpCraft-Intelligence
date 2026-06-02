@@ -62,13 +62,21 @@ def _source(
     )
 
 
+def _is_configured_secret(value: str | None) -> bool:
+    return bool(value and value not in {"replace-in-key-vault", "not-configured"})
+
+
 class GooglePlacesConnector:
     connector_name = "google_places"
 
     def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
         settings = get_settings()
-        api_key = settings.google_places_api_key or settings.google_maps_api_key
-        if not api_key:
+        api_key = (
+            settings.google_places_api_key
+            if _is_configured_secret(settings.google_places_api_key)
+            else settings.google_maps_api_key
+        )
+        if not _is_configured_secret(api_key):
             return VenueConnectorResult(
                 status=_status(
                     self.connector_name,

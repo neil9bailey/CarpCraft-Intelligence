@@ -92,3 +92,16 @@ def test_met_office_provider_requests_bd1_and_normalizes_response(monkeypatch) -
     assert result["data"]["air_temp_c"] == 17.5
 
     get_settings.cache_clear()
+
+
+def test_met_office_provider_treats_placeholder_key_as_missing(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("MET_OFFICE_API_KEY", "replace-in-key-vault")
+
+    result = MetOfficeWeatherProvider().get_snapshot(WeatherLookupRequest(latitude=52.3555, longitude=-1.1743))
+
+    assert result["source"] == "met_office"
+    assert result["data"] == {}
+    assert "MET_OFFICE_API_KEY is not configured." in result["data_gaps"]
+
+    get_settings.cache_clear()

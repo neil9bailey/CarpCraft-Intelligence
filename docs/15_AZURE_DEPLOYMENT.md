@@ -16,6 +16,7 @@ The Bicep template creates:
 
 - Resource group: `rg-carpcraft-prod`
 - Container Apps Environment and backend API Container App
+- Dedicated Basic Azure Container Registry
 - User-assigned managed identity for the API
 - Key Vault with RBAC and soft delete/purge protection
 - PostgreSQL Flexible Server and `carpcraft` database
@@ -46,14 +47,14 @@ The script is what-if by default:
 ```powershell
 $env:CARPCRAFT_POSTGRES_ADMIN_PASSWORD = "<strong-password>"
 .\scripts\plan_carpcraft_azure.ps1 `
-  -BackendImage "diiac.azurecr.io/carpcraft-backend:latest"
+  -BackendImage "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 ```
 
 After reviewing the output:
 
 ```powershell
 .\scripts\plan_carpcraft_azure.ps1 `
-  -BackendImage "diiac.azurecr.io/carpcraft-backend:latest" `
+  -BackendImage "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" `
   -Deploy
 ```
 
@@ -63,16 +64,18 @@ Dry run:
 
 ```powershell
 .\scripts\build_push_backend_image.ps1 `
-  -ImageTag "diiac.azurecr.io/carpcraft-backend:latest"
+  -ImageTag "<acr-login-server>/carpcraft-backend:latest"
 ```
 
 Execute:
 
 ```powershell
 .\scripts\build_push_backend_image.ps1 `
-  -ImageTag "diiac.azurecr.io/carpcraft-backend:latest" `
+  -ImageTag "<acr-login-server>/carpcraft-backend:latest" `
   -Execute
 ```
+
+After pushing the backend image, rerun the deployment with `-BackendImage "<acr-login-server>/carpcraft-backend:<tag>"` so Container Apps uses the production API image.
 
 ## DNS Cutover
 

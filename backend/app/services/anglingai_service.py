@@ -20,9 +20,13 @@ class AnglingAIService:
     provider_name = "AnglingAI"
     docs_url = "https://anglingai.co.uk/docs"
 
+    @staticmethod
+    def _is_configured(value: str | None) -> bool:
+        return bool(value and value not in {"replace-in-key-vault", "not-configured"})
+
     def status(self) -> ExternalAIProviderStatus:
         settings = get_settings()
-        configured = bool(settings.anglingai_api_key)
+        configured = self._is_configured(settings.anglingai_api_key)
         return ExternalAIProviderStatus(
             provider_name=self.provider_name,
             configured=configured,
@@ -81,7 +85,7 @@ class AnglingAIService:
 
     def _post(self, endpoint: str, payload: dict[str, Any], evidence_summary: str) -> AnglingAIProviderResponse:
         settings = get_settings()
-        if not settings.anglingai_api_key:
+        if not self._is_configured(settings.anglingai_api_key):
             return AnglingAIProviderResponse(
                 endpoint=endpoint,
                 configured=False,

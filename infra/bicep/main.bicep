@@ -13,10 +13,10 @@ param environmentName string = 'prod'
 param entraTenantId string = '67f8be6c-07da-4a7c-bb0a-d6bcb38cd6da'
 
 @description('Container image to run for the backend API.')
-param backendImage string
+param backendImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
-@description('Optional ACR login server. Leave empty when backendImage is public or registry auth is configured separately.')
-param acrLoginServer string = ''
+@description('Dedicated Azure Container Registry name. Must be globally unique.')
+param acrName string = toLower('acr${appName}${environmentName}${uniqueString(subscription().id, resourceGroup().id)}')
 
 @description('Backend API audience accepted by Microsoft Entra tokens.')
 param entraAudience string = 'api://9f0ac07a-2cce-4e4b-b74b-41264c6594e3'
@@ -41,7 +41,8 @@ var tags = {
   owner: 'DIIAC'
   managedBy: 'bicep'
 }
-var keyVaultSecretsUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6c')
+var keyVaultSecretsUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'law-${suffix}'
@@ -59,6 +60,29 @@ resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   name: 'id-${suffix}-api'
   location: location
   tags: tags
+}
+
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: acrName
+  location: location
+  tags: tags
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: false
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource acrPullAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: acr
+  name: guid(acr.id, appIdentity.id, acrPullRole)
+  properties: {
+    principalId: appIdentity.properties.principalId
+    roleDefinitionId: acrPullRole
+    principalType: 'ServicePrincipal'
+  }
 }
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -109,7 +133,7 @@ resource keyVaultAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01' = {
+resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: 'psql-${suffix}'
   location: location
   tags: tags
@@ -134,7 +158,7 @@ resource postgres 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01' = {
   }
 }
 
-resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-01' = {
+resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
   parent: postgres
   name: databaseName
   properties: {
@@ -143,7 +167,7 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-0
   }
 }
 
-resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-12-01' = {
+resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
   parent: postgres
   name: 'AllowAzureServices'
   properties: {
@@ -190,7 +214,7 @@ resource acaEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' = {
   tags: tags
   properties: {
     appLogsConfiguration: {
-      destination: 'LogAnalytics'
+      destination: 'log-analytics'
       logAnalyticsConfiguration: {
         customerId: logAnalytics.properties.customerId
         sharedKey: logAnalytics.listKeys().primarySharedKey
@@ -220,9 +244,9 @@ resource backendApp 'Microsoft.App/containerApps@2025-01-01' = {
         targetPort: 8000
         transport: 'http'
       }
-      registries: acrLoginServer == '' ? [] : [
+      registries: [
         {
-          server: acrLoginServer
+          server: acr.properties.loginServer
           identity: appIdentity.id
         }
       ]
@@ -320,3 +344,5 @@ output customDomainPlanned string = customDomainName
 output keyVaultName string = keyVault.name
 output storageAccountName string = storage.name
 output postgresServerName string = postgres.name
+output acrName string = acr.name
+output acrLoginServer string = acr.properties.loginServer
