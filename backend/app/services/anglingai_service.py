@@ -43,9 +43,9 @@ class AnglingAIService:
         return self._post(
             "venue-research",
             {
-                "venue_name": request.venue_name,
+                "venueName": request.venue_name,
                 "location": request.location,
-                "target_species": request.target_species,
+                "targetSpecies": request.target_species,
             },
             evidence_summary=f"AnglingAI venue research requested for {request.venue_name}.",
         )
@@ -54,11 +54,11 @@ class AnglingAIService:
         return self._post(
             "swim-selector",
             {
-                "water_type": request.water_type,
-                "target_species": request.target_species,
-                "wind_direction": request.wind_direction,
+                "waterType": request.water_type,
+                "targetSpecies": request.target_species,
+                "windDirection": request.wind_direction,
                 "season": request.season,
-                "venue_features": request.venue_features,
+                "venueFeatures": request.venue_features,
             },
             evidence_summary="AnglingAI swim-selector context requested for current watercraft conditions.",
         )
@@ -68,7 +68,7 @@ class AnglingAIService:
             "water-temp",
             {
                 "location": request.location,
-                "water_type": request.water_type,
+                "waterType": request.water_type,
             },
             evidence_summary=f"AnglingAI water temperature context requested for {request.location}.",
         )
@@ -77,7 +77,7 @@ class AnglingAIService:
         return self._post(
             "fish-id",
             {
-                "image_url": request.image_url,
+                "imageUrl": request.image_url,
                 "prompt": request.prompt,
             },
             evidence_summary="AnglingAI vision/fish-id analysis requested for a user-supplied image URL.",

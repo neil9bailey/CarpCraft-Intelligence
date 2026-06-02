@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.main import app
 from app.models.persistence import Base
 from app.routes.venues import get_venue_intelligence_service
-from app.services.venue_source_connectors import GooglePlacesConnector
+from app.services.venue_source_connectors import AnglingAIVenueResearchConnector, GooglePlacesConnector
 from app.services.venue_intelligence_service import VenueIntelligenceService
 from app.services.weather_service import WeatherLookupRequest, WeatherProvider, WeatherService
 
@@ -180,6 +180,57 @@ def test_google_places_connector_treats_placeholder_key_as_missing(monkeypatch) 
     assert result.status.status == "not_configured"
     assert result.external_place is None
     assert "GOOGLE_PLACES_API_KEY" in result.status.data_gaps[0]
+
+    get_settings.cache_clear()
+
+
+def test_anglingai_venue_research_connector_adds_source_bound_evidence(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")
+    captured_request = {}
+
+    def fake_post(url, json, headers, timeout):  # noqa: ANN001
+        captured_request.update({"url": url, "json": json, "headers": headers, "timeout": timeout})
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "venueName": "Linear Fisheries Oxford",
+                    "targetSpecies": ["carp"],
+                    "recommendedMethods": ["solid bags"],
+                    "bestSpots": ["island margins"],
+                    "rules": ["check fishery rules"],
+                    "sources": [
+                        {
+                            "url": "https://www.linear-fisheries.co.uk/",
+                            "title": "Official Linear Fisheries homepage",
+                        }
+                    ],
+                    "confidence": {"score": 91, "level": "high"},
+                },
+                "provider": "openai",
+                "model": "gpt-5.4-mini",
+                "mocked": False,
+                "webSearchEnabled": True,
+                "sourceCount": 1,
+            },
+            headers={"content-type": "application/json"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    venue = _test_service().lookup("Linear Fisheries").suggested_venue
+    result = AnglingAIVenueResearchConnector().enrich("Linear Fisheries", venue)
+
+    assert captured_request["url"].endswith("/venue-research")
+    assert captured_request["json"]["venueName"] == "Linear Fisheries Oxford"
+    assert captured_request["json"]["targetSpecies"] == "Carp"
+    assert result.status.status == "active"
+    assert result.status.connector_name == "anglingai_venue_research"
+    assert result.evidence[0].source_name == "AnglingAI"
+    assert result.evidence[0].source_type == "external_ai_venue_research"
+    assert result.evidence[1].url == "https://www.linear-fisheries.co.uk/"
 
     get_settings.cache_clear()
 

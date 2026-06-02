@@ -1,7 +1,7 @@
 import httpx
 
 from app.core.config import get_settings
-from app.schemas.domain import AnglingAIVenueResearchRequest
+from app.schemas.domain import AnglingAISwimSelectorRequest, AnglingAIVenueResearchRequest
 from app.services.anglingai_service import AnglingAIService
 
 
@@ -55,9 +55,44 @@ def test_anglingai_venue_research_uses_bearer_token(monkeypatch) -> None:
 
     assert captured["url"].endswith("/venue-research")
     assert captured["headers"]["Authorization"] == "Bearer test-anglingai-key"
-    assert captured["json"]["venue_name"] == "Linear Fisheries"
+    assert captured["json"]["venueName"] == "Linear Fisheries"
+    assert captured["json"]["targetSpecies"] == "Carp"
     assert response.status == "active"
     assert response.result == {"summary": "venue context"}
     assert response.evidence[0].source_type == "external_ai_provider"
+
+    get_settings.cache_clear()
+
+
+def test_anglingai_swim_selector_uses_documented_camel_case_payload(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")
+    captured = {}
+
+    def fake_post(url, json, headers, timeout):  # noqa: ANN001
+        captured.update({"url": url, "json": json, "headers": headers, "timeout": timeout})
+        return httpx.Response(
+            200,
+            json={"summary": "swim context"},
+            headers={"content-type": "application/json"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    response = AnglingAIService().swim_selector(
+        AnglingAISwimSelectorRequest(
+            water_type="commercial-stillwater",
+            wind_direction="SW",
+            venue_features=["island", "reed beds"],
+        )
+    )
+
+    assert captured["url"].endswith("/swim-selector")
+    assert captured["json"]["waterType"] == "commercial-stillwater"
+    assert captured["json"]["targetSpecies"] == "Carp"
+    assert captured["json"]["windDirection"] == "SW"
+    assert captured["json"]["venueFeatures"] == ["island", "reed beds"]
+    assert response.status == "active"
 
     get_settings.cache_clear()

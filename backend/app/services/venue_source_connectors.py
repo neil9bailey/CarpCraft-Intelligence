@@ -6,7 +6,14 @@ from typing import Protocol
 import httpx
 
 from app.core.config import get_settings
-from app.schemas.domain import Venue, VenueConnectorStatus, VenueExternalPlace, VenueSourceEvidence
+from app.schemas.domain import (
+    AnglingAIVenueResearchRequest,
+    Venue,
+    VenueConnectorStatus,
+    VenueExternalPlace,
+    VenueSourceEvidence,
+)
+from app.services.anglingai_service import AnglingAIService
 
 
 @dataclass(slots=True)
@@ -172,6 +179,117 @@ class GooglePlacesConnector:
         )
 
 
+class AnglingAIVenueResearchConnector:
+    connector_name = "anglingai_venue_research"
+
+    @staticmethod
+    def _confidence(data: dict[str, object]) -> int:
+        confidence = data.get("confidence")
+        if isinstance(confidence, dict):
+            score = confidence.get("score")
+            if isinstance(score, int | float):
+                return max(0, min(100, int(score)))
+        return 70
+
+    @staticmethod
+    def _sources(data: dict[str, object]) -> list[dict[str, object]]:
+        sources = data.get("sources")
+        if not isinstance(sources, list):
+            return []
+        return [source for source in sources if isinstance(source, dict)]
+
+    @staticmethod
+    def _summary(data: dict[str, object], venue: Venue) -> str:
+        sections = [
+            section
+            for section in ("targetSpecies", "recommendedMethods", "baits", "bestSpots", "seasonalPatterns", "rules")
+            if data.get(section)
+        ]
+        if sections:
+            return (
+                f"AnglingAI Pro venue research returned {', '.join(sections)} for {venue.name}. "
+                "Treat as advisory until source links and fishery rules are reviewed."
+            )
+        return f"AnglingAI Pro venue research returned advisory context for {venue.name}; review source links before importing facts."
+
+    def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
+        response = AnglingAIService().venue_research(
+            AnglingAIVenueResearchRequest(
+                venue_name=venue.name,
+                location=venue.location_label or query,
+                target_species="Carp",
+            )
+        )
+        if response.status == "not_configured":
+            return VenueConnectorResult(
+                status=_status(
+                    self.connector_name,
+                    "AnglingAI Pro venue research",
+                    "not_configured",
+                    "AnglingAI venue research was skipped because ANGLINGAI_API_KEY is not configured.",
+                    data_gaps=response.data_gaps,
+                )
+            )
+        if response.status != "active" or not isinstance(response.result, dict):
+            return VenueConnectorResult(
+                status=_status(
+                    self.connector_name,
+                    "AnglingAI Pro venue research",
+                    "request_failed",
+                    "AnglingAI venue research was configured but did not return usable structured data.",
+                    data_gaps=response.data_gaps or ["Review AnglingAI API key plan, quota and endpoint availability."],
+                )
+            )
+
+        raw_data = response.result.get("data")
+        data = raw_data if isinstance(raw_data, dict) else {}
+        confidence = self._confidence(data)
+        sources = self._sources(data)
+        evidence = [
+            _source(
+                "AnglingAI",
+                "external_ai_venue_research",
+                response.source_url,
+                f"AnglingAI Pro venue research for {venue.name}",
+                self._summary(data, venue),
+                confidence,
+                "Use as external advisory evidence only. Import fishery facts after reviewing cited sources and current fishery rules.",
+            )
+        ]
+        for source in sources[:5]:
+            url = source.get("url")
+            title = source.get("title")
+            if not url or not title:
+                continue
+            evidence.append(
+                _source(
+                    "AnglingAI cited source",
+                    "external_ai_citation",
+                    str(url),
+                    str(title),
+                    f"Source cited by AnglingAI venue research for {venue.name}.",
+                    max(0, confidence - 10),
+                    "Review the source directly before normalizing venue rules, costs, swims or catch history.",
+                )
+            )
+
+        source_count = response.result.get("sourceCount")
+        source_count_text = f"{source_count} cited source(s)" if isinstance(source_count, int) else "source-bound output"
+        return VenueConnectorResult(
+            status=_status(
+                self.connector_name,
+                "AnglingAI Pro venue research",
+                "active",
+                f"AnglingAI venue research returned {source_count_text} with confidence {confidence}.",
+                evidence_count=len(evidence),
+                data_gaps=[
+                    "AnglingAI Pro does not expose a general all-fisheries directory through this key; use seeded venue names from approved source lists."
+                ],
+            ),
+            evidence=evidence,
+        )
+
+
 class CatchGoCatchConnector:
     connector_name = "catch_gocatch"
 
@@ -249,6 +367,7 @@ class FacebookGroupsConnector:
 def default_venue_source_connectors() -> list[VenueSourceConnector]:
     return [
         GooglePlacesConnector(),
+        AnglingAIVenueResearchConnector(),
         CatchGoCatchConnector(),
         SwimbookerConnector(),
         FacebookGroupsConnector(),
