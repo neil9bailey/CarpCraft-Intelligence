@@ -32,6 +32,7 @@ def _private_venue_id(canonical_venue_id: str, user_id: str) -> str:
 @router.get("/intelligence/lookup", response_model=VenueIntelligenceReport)
 def lookup_venue_intelligence(
     query: str = Query(..., min_length=2),
+    principal: Principal = Depends(get_current_principal),
     service: VenueIntelligenceService = Depends(get_venue_intelligence_service),
 ) -> VenueIntelligenceReport:
     try:
