@@ -5,9 +5,12 @@ import 'dart:io';
 import 'auth_state.dart';
 
 class CarpCraftApiException implements Exception {
-  const CarpCraftApiException(this.message);
+  const CarpCraftApiException(this.message, {this.statusCode});
 
   final String message;
+  final int? statusCode;
+
+  bool get isUnauthorized => statusCode == HttpStatus.unauthorized;
 
   @override
   String toString() => message;
@@ -23,7 +26,7 @@ class CarpCraftApiClient {
       'CARPCRAFT_USER_ID',
       defaultValue: 'mobile-local-user',
     ),
-    this.timeout = const Duration(seconds: 2),
+    this.timeout = const Duration(seconds: 15),
   });
 
   final String baseUrl;
@@ -88,8 +91,14 @@ class CarpCraftApiClient {
       final payload =
           await response.transform(utf8.decoder).join().timeout(timeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        if (response.statusCode == HttpStatus.unauthorized) {
+          AuthState.instance.markApiAuthRequired(
+              'Sign in with DIIAC Entra ID to use the production API.');
+        }
         throw CarpCraftApiException(
-            'CarpCraft API returned ${response.statusCode}: $payload');
+          'CarpCraft API returned ${response.statusCode}: $payload',
+          statusCode: response.statusCode,
+        );
       }
       if (payload.trim().isEmpty) {
         return null;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_settings_state.dart';
 import '../../core/app_repository.dart';
 import '../../core/mock_data.dart';
 import '../../shared/carp_scaffold.dart';
@@ -14,16 +15,19 @@ class RecommendationScreen extends StatefulWidget {
 class _RecommendationScreenState extends State<RecommendationScreen> {
   final AppRepository _repository = const AppRepository();
   late Future<MockRecommendation> _recommendation;
+  late Future<MockIntelligenceBrief> _brief;
 
   @override
   void initState() {
     super.initState();
     _recommendation = _repository.generateRecommendation();
+    _brief = _repository.loadExampleIntelligenceBrief();
   }
 
   void _reload() {
     setState(() {
       _recommendation = _repository.generateRecommendation();
+      _brief = _repository.loadExampleIntelligenceBrief();
     });
   }
 
@@ -48,7 +52,78 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             return RecommendationCard(recommendation: snapshot.data ?? mockRecommendation);
           },
         ),
+        const SizedBox(height: 12),
+        if (AppSettingsState.instance.aiExplanationsEnabled)
+          FutureBuilder<MockIntelligenceBrief>(
+            future: _brief,
+            builder: (context, snapshot) {
+              final brief = snapshot.data ?? mockIntelligenceBrief;
+              return SectionCard(
+                title: 'AI explanation',
+                icon: Icons.psychology_outlined,
+                children: [
+                  Text(brief.headline),
+                  const SizedBox(height: 8),
+                  _ExplanationLine(
+                    icon: Icons.verified_outlined,
+                    text: '${brief.confidenceScore}% confidence',
+                  ),
+                  for (final evidence in brief.evidence)
+                    _ExplanationLine(
+                        icon: Icons.source_outlined, text: evidence),
+                  for (final gap in brief.dataGaps)
+                    _ExplanationLine(icon: Icons.info_outline, text: gap),
+                  for (final warning in brief.safetyWarnings)
+                    _ExplanationLine(
+                        icon: Icons.health_and_safety_outlined,
+                        text: warning),
+                  _ExplanationLine(
+                      icon: Icons.rule_outlined,
+                      text: brief.noGuaranteeNotice),
+                ],
+              );
+            },
+          )
+        else
+          SectionCard(
+            title: 'AI explanation',
+            icon: Icons.psychology_outlined,
+            children: [
+              const Text('AI explanations are disabled in Settings.'),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  AppSettingsState.instance.setAiExplanationsEnabled(true);
+                  setState(() {});
+                },
+                icon: const Icon(Icons.toggle_on_outlined),
+                label: const Text('Enable explanations'),
+              ),
+            ],
+          ),
       ],
+    );
+  }
+}
+
+class _ExplanationLine extends StatelessWidget {
+  const _ExplanationLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text)),
+        ],
+      ),
     );
   }
 }

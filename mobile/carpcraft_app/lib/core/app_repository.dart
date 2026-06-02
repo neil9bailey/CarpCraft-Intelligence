@@ -219,7 +219,10 @@ class AppRepository {
     try {
       final response = await api.getMap('/api/v1/anglingai/status');
       return MockProviderStatus.fromJson(response);
-    } on CarpCraftApiException {
+    } on CarpCraftApiException catch (error) {
+      if (error.isUnauthorized) {
+        return authRequiredAnglingAIStatus;
+      }
       return mockAnglingAIStatus;
     }
   }

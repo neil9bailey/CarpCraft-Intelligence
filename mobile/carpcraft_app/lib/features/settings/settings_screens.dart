@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
+import '../../core/app_settings_state.dart';
 import '../../core/auth_service.dart';
 import '../../core/auth_state.dart';
 import '../../shared/carp_scaffold.dart';
@@ -14,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final CarpCraftAuthService _authService = CarpCraftAuthService();
   bool _signingIn = false;
+  bool _requestingLocation = false;
 
   Future<void> _signIn() async {
     setState(() {
@@ -37,9 +40,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _setPreciseLocation(bool enabled) async {
+    if (!enabled) {
+      AppSettingsState.instance.setPreciseLocationEnabled(false);
+      setState(() {});
+      return;
+    }
+    setState(() {
+      _requestingLocation = true;
+    });
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+      }
+      final allowed = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+      AppSettingsState.instance.setPreciseLocationEnabled(allowed);
+      if (!allowed && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Location permission was not granted.')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _requestingLocation = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final signedIn = AuthState.instance.isSignedIn;
+    final settings = AppSettingsState.instance;
     return CarpScaffold(
       title: 'Settings',
       children: [
@@ -84,15 +121,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              value: false,
-              onChanged: (_) {},
+              value: settings.preciseLocationEnabled,
+              onChanged: _requestingLocation ? null : _setPreciseLocation,
               title: const Text('Precise location'),
+              subtitle: const Text(
+                  'Only used when you choose current location or map a spot.'),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              value: false,
-              onChanged: (_) {},
+              value: settings.aiExplanationsEnabled,
+              onChanged: (value) {
+                AppSettingsState.instance.setAiExplanationsEnabled(value);
+                setState(() {});
+              },
               title: const Text('AI explanations'),
+              subtitle: const Text(
+                  'Shows grounded evidence, confidence and data gaps.'),
             ),
           ],
         ),

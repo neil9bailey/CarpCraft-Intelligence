@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app.dart';
+import '../../core/app_settings_state.dart';
 import '../../core/app_repository.dart';
 import '../../core/mock_data.dart';
 import '../../shared/carp_scaffold.dart';
@@ -1057,6 +1058,9 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     }
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+      }
       setState(() {
         _locationState = 'Location not allowed';
       });
@@ -1066,10 +1070,12 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     final position = await Geolocator.getCurrentPosition(
         locationSettings:
             const LocationSettings(accuracy: LocationAccuracy.high));
+    AppSettingsState.instance.setPreciseLocationEnabled(true);
     final target = LatLng(position.latitude, position.longitude);
     setState(() {
       _mapTarget = target;
-      _locationState = 'Current location active';
+      _locationState =
+          'Current location active, accuracy ${position.accuracy.toStringAsFixed(0)} m';
     });
     await _mapController?.animateCamera(CameraUpdate.newCameraPosition(
       CameraPosition(target: target, zoom: _zoom, bearing: _bearing, tilt: _tilt),
@@ -1266,6 +1272,23 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
           title: 'Location',
           icon: Icons.my_location_outlined,
           children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: AppSettingsState.instance.preciseLocationEnabled,
+              onChanged: (value) {
+                if (value) {
+                  _useCurrentLocation();
+                } else {
+                  AppSettingsState.instance.setPreciseLocationEnabled(false);
+                  setState(() {
+                    _locationState = 'Location off';
+                  });
+                }
+              },
+              title: const Text('Precise GPS for this session'),
+              subtitle: const Text(
+                  'Enabled only when you choose to use current location.'),
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.privacy_tip_outlined),

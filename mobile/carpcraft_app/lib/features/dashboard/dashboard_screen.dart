@@ -1,13 +1,114 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app.dart';
+import '../../core/auth_service.dart';
+import '../../core/auth_state.dart';
 import '../../shared/carp_scaffold.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  static const String _buildSha = String.fromEnvironment(
+    'CARPCRAFT_BUILD_SHA',
+    defaultValue: 'local',
+  );
+  static const String _buildChannel = String.fromEnvironment(
+    'CARPCRAFT_BUILD_CHANNEL',
+    defaultValue: 'dev',
+  );
+
+  final CarpCraftAuthService _authService = CarpCraftAuthService();
+  late final Future<PackageInfo> _packageInfo;
+  bool _signingIn = false;
+  bool _promptShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _packageInfo = PackageInfo.fromPlatform();
+    AuthState.instance.addListener(_authChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showSignInPrompt());
+  }
+
+  @override
+  void dispose() {
+    AuthState.instance.removeListener(_authChanged);
+    super.dispose();
+  }
+
+  void _authChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _showSignInPrompt() async {
+    if (_promptShown ||
+        !_authService.isConfigured ||
+        AuthState.instance.isSignedIn ||
+        !mounted) {
+      return;
+    }
+    _promptShown = true;
+    final shouldSignIn = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('DIIAC Entra sign-in'),
+        content: const Text(
+          'Sign in to use live venues, AnglingAI status, AI intelligence and private production data.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Later'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.login),
+            label: const Text('Sign in'),
+          ),
+        ],
+      ),
+    );
+    if (shouldSignIn == true) {
+      await _signIn();
+    }
+  }
+
+  Future<void> _signIn() async {
+    setState(() {
+      _signingIn = true;
+    });
+    try {
+      await _authService.signIn();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('DIIAC Entra sign-in complete.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _signingIn = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authState = AuthState.instance;
     return CarpScaffold(
       title: 'Dashboard',
       actions: [
@@ -26,6 +127,64 @@ class DashboardScreen extends StatelessWidget {
         Text(
           'Evidence-ranked watercraft for private venue memory.',
           style: Theme.of(context).textTheme.bodyLarge,
+        ),
+        const SizedBox(height: 18),
+        SectionCard(
+          title: 'Account and build',
+          icon: Icons.verified_user_outlined,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                authState.isSignedIn
+                    ? Icons.check_circle_outline
+                    : Icons.login,
+              ),
+              title: Text(authState.isSignedIn
+                  ? 'DIIAC Entra connected'
+                  : 'DIIAC Entra sign-in required'),
+              subtitle: Text(authState.isSignedIn
+                  ? 'Production API requests include a bearer token.'
+                  : 'Live venues, AI intelligence and provider status need sign-in.'),
+              trailing: authState.isSignedIn
+                  ? IconButton(
+                      tooltip: 'Sign out',
+                      icon: const Icon(Icons.logout),
+                      onPressed: () => _authService.signOut(),
+                    )
+                  : FilledButton.icon(
+                      onPressed: _signingIn || !_authService.isConfigured
+                          ? null
+                          : _signIn,
+                      icon: _signingIn
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.login),
+                      label: const Text('Sign in'),
+                    ),
+            ),
+            if (authState.apiAuthRequired)
+              _DashboardLine(
+                icon: Icons.error_outline,
+                text: authState.lastApiAuthMessage ??
+                    'Production API sign-in is required.',
+              ),
+            FutureBuilder<PackageInfo>(
+              future: _packageInfo,
+              builder: (context, snapshot) {
+                final info = snapshot.data;
+                final version =
+                    info == null ? 'loading' : '${info.version}+${info.buildNumber}';
+                return _DashboardLine(
+                  icon: Icons.tag_outlined,
+                  text: 'Build $_buildChannel $_buildSha | App $version',
+                );
+              },
+            ),
+          ],
         ),
         const SizedBox(height: 18),
         const Wrap(
@@ -79,6 +238,28 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _DashboardLine extends StatelessWidget {
+  const _DashboardLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text)),
+        ],
+      ),
     );
   }
 }

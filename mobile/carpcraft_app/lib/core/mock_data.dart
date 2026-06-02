@@ -1094,6 +1094,16 @@ const mockAnglingAIStatus = MockProviderStatus(
   dataGaps: ['No AnglingAI API key is configured.'],
 );
 
+const authRequiredAnglingAIStatus = MockProviderStatus(
+  providerName: 'AnglingAI',
+  configured: false,
+  summary:
+      'Sign in with DIIAC Entra ID to check live AnglingAI provider status.',
+  dataGaps: [
+    'The production API rejected the request before provider status could be checked.',
+  ],
+);
+
 MockVenueIntelligence fallbackVenueIntelligence(String query) {
   final normalized = query.toLowerCase();
   if (normalized.contains('linear')) {
