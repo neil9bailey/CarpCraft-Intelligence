@@ -16,6 +16,8 @@ const mainDestinations = [
   NavDestination('Start session', AppRoutes.startSession, Icons.play_arrow_outlined),
   NavDestination('Live session', AppRoutes.liveSession, Icons.timeline_outlined),
   NavDestination('Recommendation', AppRoutes.recommendation, Icons.tips_and_updates_outlined),
+  NavDestination('Capture', AppRoutes.capture, Icons.add_a_photo_outlined),
+  NavDestination('Weather', AppRoutes.weather, Icons.cloud_outlined),
   NavDestination('Review', AppRoutes.review, Icons.assignment_turned_in_outlined),
   NavDestination('Settings', AppRoutes.settings, Icons.settings_outlined),
   NavDestination('Privacy', AppRoutes.privacy, Icons.lock_outline),

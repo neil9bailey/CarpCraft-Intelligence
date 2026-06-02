@@ -32,6 +32,7 @@ The backend validates the JWT signature from Microsoft JWKS, issuer, audience, t
 - `GET/POST/GET by id/PUT/DELETE /api/v1/water-readings`
 - `GET/POST/GET by id/PUT/DELETE /api/v1/weather-snapshots`
 - `GET /api/v1/weather-snapshots/live/lookup`
+- `GET /api/v1/weather-snapshots/live/conditions`
 - `GET/POST/GET by id/PUT/DELETE /api/v1/bite-events`
 - `GET/POST/GET by id/PUT/DELETE /api/v1/catches`
 - `POST /api/v1/blanks`
@@ -41,16 +42,37 @@ The backend validates the JWT signature from Microsoft JWKS, issuer, audience, t
 - `GET /api/v1/venues/intelligence/lookup`
 - `POST /api/v1/venues/intelligence/import`
 - `GET /api/v1/venues/{id}/lake-brain-summary`
+- `GET/POST/GET by id/PUT/DELETE /api/v1/capture-assets`
+- `GET/POST/GET by id/PUT/DELETE /api/v1/fishery-profiles`
+- `POST /api/v1/fishery-profiles/from-venue-intelligence`
+- `POST /api/v1/ai-intelligence/brief`
+- `GET /api/v1/ai-intelligence/example-live-session`
+- `GET/POST/GET by id/PUT/DELETE /api/v1/mcp-agent-runs`
+- `GET /api/v1/anglingai/status`
+- `POST /api/v1/anglingai/venue-research`
+- `POST /api/v1/anglingai/swim-selector`
+- `POST /api/v1/anglingai/water-temp`
+- `POST /api/v1/anglingai/vision`
 
 ## Route Status
 
-Route data now persists through SQLAlchemy once migrations have been applied. Venues, swims, spots, sessions, rod sets, bait applications, observations, water readings, weather snapshots, bite events, catches, blanks, recommendations and recommendation outcomes use normalized tables. Secondary scaffold resources can continue through `json_resource_records` until promoted.
+Route data now persists through SQLAlchemy once migrations have been applied. Venues, swims, spots, sessions, rod sets, bait applications, observations, water readings, weather snapshots, bite events, catches, blanks, recommendations and recommendation outcomes use normalized tables. Capture assets, fishery profiles and MCP agent runs currently use `json_resource_records` until promoted.
 
 `GET /api/v1/weather-snapshots/live/lookup` returns a multi-provider weather snapshot from configured provider adapters. Open-Meteo works with latitude and longitude without an API key. Met Office DataHub Site-specific Global Spot data is attempted with `dataSource=BD1` when `MET_OFFICE_API_KEY` is configured; otherwise the response explicitly reports that provider gap.
+
+`GET /api/v1/weather-snapshots/live/conditions` returns the same provider evidence plus condition labels, wind direction, precipitation intensity and an approximate surface-water temperature. The water temperature is an inference with confidence and data gaps, not a measured reading.
 
 `GET /api/v1/venues/intelligence/lookup?query=...` returns a grounded venue intelligence report for supported source packs. The report includes a private suggested venue, known public lakes/swims, map assets, source evidence, connector statuses, licensing notes, data gaps, ethical warnings and optional live weather. Google Places Text Search enrichment is attempted when `GOOGLE_PLACES_API_KEY` or `GOOGLE_MAPS_API_KEY` is configured. Catch/GoCatch and swimbooker are reported as partner/manual connectors until official API access is configured. Facebook group ingestion is reported as blocked; the product must not scrape groups.
 
 `POST /api/v1/venues/intelligence/import?query=...` creates or updates a private user-owned venue and starter swim records from the grounded report. Public map/depth assets remain source links only unless `cache_allowed` is explicitly true after licensing review.
+
+`POST /api/v1/fishery-profiles/from-venue-intelligence?query=...` creates a private fishery profile from a grounded venue report. Booking/cost entries stay source-bound and require partner/API/export verification before public use.
+
+`POST /api/v1/capture-assets` stores camera/gallery metadata, image annotations, distance/wrap/depth fields, bottom/weed/algae state and rig/bait notes. Captures are private by default. Public sharing requires explicit `public_sharing_consent=true`; precise latitude/longitude requires `precise_location_user_enabled=true`.
+
+`POST /api/v1/ai-intelligence/brief` creates a structured brief from weather, observations, bottom/weed conditions and capture evidence. It returns confidence, evidence, gaps, welfare warnings and a no-guarantee notice.
+
+`/api/v1/anglingai/*` routes call AnglingAI only when `ANGLINGAI_API_KEY` is configured on the backend. Output is returned as external advisory evidence with provider attribution and review gaps.
 
 ## Recommendation Output Contract
 

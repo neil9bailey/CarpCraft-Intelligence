@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     ai_explanations_enabled: bool = Field(default=False, alias="AI_EXPLANATIONS_ENABLED")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str | None = Field(default=None, alias="OPENAI_MODEL")
+    anglingai_api_key: str | None = Field(default=None, alias="ANGLINGAI_API_KEY")
+    anglingai_base_url: str = Field(default="https://anglingai.co.uk/api/v1", alias="ANGLINGAI_BASE_URL")
 
     model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore")
 

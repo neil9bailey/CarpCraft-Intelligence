@@ -2,6 +2,8 @@
 
 Production AI is not implemented in Phase A. The backend includes interfaces for a future explanation layer and retriever.
 
+The current release includes a grounded brief builder and optional external-provider adapters. These are evidence-formatting services, not autonomous catch predictors.
+
 ## AI Explanation Rules
 
 The explanation layer must:
@@ -14,6 +16,8 @@ The explanation layer must:
 - Use plain angling language.
 - Return fixed JSON fields.
 - Support future OpenAI integration through environment variables.
+- Treat AnglingAI and any other external AI provider as attributed advisory evidence.
+- Keep MCP/agent runs private by default and require human review before public profile use.
 
 ## RAG Knowledge Categories
 
@@ -39,5 +43,14 @@ Environment variables are reserved for future integration:
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 - `AI_EXPLANATIONS_ENABLED`
+- `ANGLINGAI_API_KEY`
+- `ANGLINGAI_BASE_URL`
 
 AI output should remain secondary to deterministic scores.
+
+## MCP Agent Boundaries
+
+- Agent runs must store objective, status, evidence, data gaps and review state.
+- Agent runs must not scrape private accounts or Facebook groups.
+- Catch, Swimbooker and fishery directory data must come from official partner APIs, approved exports, user-supplied links or fishery-approved public pages.
+- Public sharing of generated fishery profiles requires explicit consent and source/licensing review.

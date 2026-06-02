@@ -12,7 +12,10 @@ This repository contains the Phase A scaffold plus the first Phase B persistence
 - SQLAlchemy/Alembic persistence with normalized core analytics tables.
 - Local auth plus production Microsoft Entra ID validation for the DIIAC tenant.
 - Flutter Android-first mobile skeleton with API wiring, DIIAC sign-in, hybrid maps and explicit geolocation action.
+- Mobile capture workflow for camera/gallery evidence, image markers, distance/wrap/depth notes and private-by-default sharing controls.
+- Rich weather conditions screen with multi-provider weather, approximate surface-temperature caveat and grounded AI brief inputs.
 - PostgreSQL Docker Compose using a pgvector-ready image.
+- Azure Container Apps deployment scaffold for the DIIAC tenant with Key Vault, PostgreSQL and private capture storage.
 - Documentation, legal/compliance drafts, sample data and Windows helper scripts.
 
 ## Requirements
@@ -108,6 +111,10 @@ Weather lookup uses two explicit provider adapters: Open-Meteo for open forecast
 
 Venue intelligence lookup starts with grounded fishery source packs and then reports connector status for Google Places, Catch/GoCatch, swimbooker and Facebook groups. Google Places can enrich map candidates when configured. Catch/GoCatch and swimbooker are partner/manual connectors until official API access is agreed. Facebook group ingestion is disabled by policy; use explicit user-provided links or fishery-owned public pages only. Public map and depth-map assets are stored as source links unless licensing review marks them cacheable.
 
+AnglingAI can be used as an optional external evidence provider when `ANGLINGAI_API_KEY` is configured. Its output is treated as source-attributed advisory evidence, not as a replacement for CarpCraft logs, fishery rules or deterministic recommendation checks.
+
+Production Azure deployment planning is documented in `docs/15_AZURE_DEPLOYMENT.md`. The deployment scaffold is dry-run first and DNS records for `carpcraft.diiac.io` should only be added once Azure provides the Container App hostname and custom-domain verification value.
+
 ## Run Tests
 
 ```powershell
@@ -146,5 +153,6 @@ The legal/compliance documents in this repository are engineering drafts for pla
 3. Replace the remaining JSON bridge resources where query needs demand it.
 4. Add normalized persistence for user/account profile metadata once production auth is exercised end to end.
 5. Add server-side weather snapshot caching and daily Met Office call-budget protection.
-6. Add release signing and Play internal testing configuration.
-7. Add grounded AI explanations and RAG ingestion after deterministic rules are stable.
+6. Add Azure Blob upload URLs for capture binaries and image thumbnails.
+7. Add release signing and Play internal testing configuration.
+8. Add grounded AI explanations and RAG ingestion after deterministic rules are stable.

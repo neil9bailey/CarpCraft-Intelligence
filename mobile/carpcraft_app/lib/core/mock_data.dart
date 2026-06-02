@@ -221,6 +221,73 @@ class MockVenueWeather {
   }
 }
 
+class MockWeatherCondition {
+  const MockWeatherCondition({
+    required this.source,
+    required this.providerCount,
+    required this.condition,
+    required this.dataGaps,
+    required this.approximationNotes,
+    this.airTempC,
+    this.approxSurfaceTempC,
+    this.approxSurfaceTempConfidence = 0,
+    this.pressureHpa,
+    this.windSpeedMps,
+    this.windDirectionDegrees,
+    this.windDirectionLabel,
+    this.rainfallMm,
+    this.rainfallRateMmH,
+    this.precipitationIntensity,
+    this.cloudCoverPercent,
+    this.humidityPercent,
+  });
+
+  final String source;
+  final int providerCount;
+  final String condition;
+  final double? airTempC;
+  final double? approxSurfaceTempC;
+  final int approxSurfaceTempConfidence;
+  final double? pressureHpa;
+  final double? windSpeedMps;
+  final double? windDirectionDegrees;
+  final String? windDirectionLabel;
+  final double? rainfallMm;
+  final double? rainfallRateMmH;
+  final String? precipitationIntensity;
+  final int? cloudCoverPercent;
+  final int? humidityPercent;
+  final List<String> dataGaps;
+  final List<String> approximationNotes;
+
+  factory MockWeatherCondition.fromJson(Map<String, dynamic> json) {
+    return MockWeatherCondition(
+      source: json['source'] as String? ?? 'multi_provider',
+      providerCount: _intValue(json['provider_count']),
+      condition: json['condition'] as String? ?? 'unknown',
+      airTempC: _doubleValue(json['air_temp_c']),
+      approxSurfaceTempC: _doubleValue(json['approx_surface_temp_c']),
+      approxSurfaceTempConfidence:
+          _intValue(json['approx_surface_temp_confidence']),
+      pressureHpa: _doubleValue(json['pressure_hpa']),
+      windSpeedMps: _doubleValue(json['wind_speed_mps']),
+      windDirectionDegrees: _doubleValue(json['wind_direction_degrees']),
+      windDirectionLabel: json['wind_direction_label'] as String?,
+      rainfallMm: _doubleValue(json['rainfall_mm']),
+      rainfallRateMmH: _doubleValue(json['rainfall_rate_mm_h']),
+      precipitationIntensity: json['precipitation_intensity'] as String?,
+      cloudCoverPercent: json['cloud_cover_percent'] == null
+          ? null
+          : _intValue(json['cloud_cover_percent']),
+      humidityPercent: json['humidity_percent'] == null
+          ? null
+          : _intValue(json['humidity_percent']),
+      dataGaps: _stringList(json['data_gaps']),
+      approximationNotes: _stringList(json['approximation_notes']),
+    );
+  }
+}
+
 class MockVenueSourceEvidence {
   const MockVenueSourceEvidence({
     required this.sourceName,
@@ -392,6 +459,69 @@ class MockRecommendation {
       alternativePlan: json['alternative_plan'] as String? ??
           'Keep one option mobile and review outcomes.',
       fishWelfareWarning: json['fish_welfare_warning'] as String?,
+    );
+  }
+}
+
+class MockIntelligenceBrief {
+  const MockIntelligenceBrief({
+    required this.headline,
+    required this.confidenceScore,
+    required this.recommendations,
+    required this.evidence,
+    required this.dataGaps,
+    required this.safetyWarnings,
+    required this.noGuaranteeNotice,
+  });
+
+  final String headline;
+  final int confidenceScore;
+  final List<String> recommendations;
+  final List<String> evidence;
+  final List<String> dataGaps;
+  final List<String> safetyWarnings;
+  final String noGuaranteeNotice;
+
+  factory MockIntelligenceBrief.fromJson(Map<String, dynamic> json) {
+    final evidenceItems = json['evidence'];
+    return MockIntelligenceBrief(
+      headline: json['headline'] as String? ?? 'Grounded brief',
+      confidenceScore: _intValue(json['confidence_score']),
+      recommendations: _stringList(json['recommendations']),
+      evidence: evidenceItems is List
+          ? evidenceItems
+              .whereType<Map>()
+              .map((item) => item['summary'])
+              .whereType<String>()
+              .toList()
+          : const [],
+      dataGaps: _stringList(json['data_gaps']),
+      safetyWarnings: _stringList(json['safety_warnings']),
+      noGuaranteeNotice: json['no_guarantee_notice'] as String? ??
+          'This is a source-grounded watercraft brief, not a catch prediction or guarantee.',
+    );
+  }
+}
+
+class MockProviderStatus {
+  const MockProviderStatus({
+    required this.providerName,
+    required this.configured,
+    required this.summary,
+    required this.dataGaps,
+  });
+
+  final String providerName;
+  final bool configured;
+  final String summary;
+  final List<String> dataGaps;
+
+  factory MockProviderStatus.fromJson(Map<String, dynamic> json) {
+    return MockProviderStatus(
+      providerName: json['provider_name'] as String? ?? 'Provider',
+      configured: json['configured'] as bool? ?? false,
+      summary: json['summary'] as String? ?? '',
+      dataGaps: _stringList(json['data_gaps']),
     );
   }
 }
@@ -730,6 +860,61 @@ const mockRecommendation = MockRecommendation(
   ],
   alternativePlan:
       'If the move produces only liners, adjust depth or presentation before adding bait.',
+);
+
+const mockWeatherCondition = MockWeatherCondition(
+  source: 'offline_demo',
+  providerCount: 2,
+  condition: 'partly_cloudy',
+  airTempC: 17.8,
+  approxSurfaceTempC: 17.9,
+  approxSurfaceTempConfidence: 65,
+  pressureHpa: 1008.8,
+  windSpeedMps: 3.2,
+  windDirectionDegrees: 220,
+  windDirectionLabel: 'SW',
+  rainfallMm: 0,
+  precipitationIntensity: 'none',
+  cloudCoverPercent: 42,
+  humidityPercent: 74,
+  dataGaps: [
+    'Use a thermometer reading when surface temperature matters for decisions.',
+  ],
+  approximationNotes: [
+    'Approximate surface temperature is inferred from air, cloud, wind and rain; it is not a measured water reading.',
+  ],
+);
+
+const mockIntelligenceBrief = MockIntelligenceBrief(
+  headline: 'Grounded live-session brief',
+  confidenceScore: 52,
+  recommendations: [
+    'Check water pushed by the SW wind first, then validate with shows or liners before committing bait.',
+    'On silt, record lead feel and favour presentations that avoid burying the hook bait.',
+    'Where weed is present, mark clear presentation pockets and record any cleaned-off rigs.',
+  ],
+  evidence: [
+    'User observations: two shows at 70-80 yards off the reedline; one liner on the middle rod.',
+    'Bottom notes: gravel, silt.',
+  ],
+  dataGaps: [
+    'Live weather has not been attached to this session.',
+    'No photos, annotated maps or rig/catch captures are attached yet.',
+  ],
+  safetyWarnings: [
+    'Never disturb spawning fish.',
+    'Follow current fishery rules, fish care requirements and local law.',
+  ],
+  noGuaranteeNotice:
+      'This is a source-grounded watercraft brief, not a catch prediction or guarantee.',
+);
+
+const mockAnglingAIStatus = MockProviderStatus(
+  providerName: 'AnglingAI',
+  configured: false,
+  summary:
+      'Set ANGLINGAI_API_KEY to enable optional AnglingAI venue, weather and vision enrichment.',
+  dataGaps: ['No AnglingAI API key is configured.'],
 );
 
 MockVenueIntelligence fallbackVenueIntelligence(String query) {

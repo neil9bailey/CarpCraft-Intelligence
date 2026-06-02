@@ -189,8 +189,10 @@ class WeatherService:
             "wind_speed_mps": primary_data.get("wind_speed_mps"),
             "wind_direction_degrees": primary_data.get("wind_direction_degrees"),
             "rainfall_mm": primary_data.get("rainfall_mm"),
+            "rainfall_rate_mm_h": primary_data.get("rainfall_rate_mm_h"),
             "cloud_cover_percent": primary_data.get("cloud_cover_percent"),
             "humidity_percent": primary_data.get("humidity_percent"),
+            "weather_code": primary_data.get("weather_code"),
             "providers": provider_results,
             "data_gaps": data_gaps,
         }

@@ -36,3 +36,4 @@ Thumbs.db
 # Generated local exports
 exports/
 tmp/
+infra/bicep/*.json

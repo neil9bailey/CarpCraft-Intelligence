@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -837,10 +839,19 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
                 : GoogleMap(
                     initialCameraPosition:
                         CameraPosition(target: _mapTarget, zoom: 18),
+                    gestureRecognizers: {
+                      Factory<OneSequenceGestureRecognizer>(
+                        () => EagerGestureRecognizer(),
+                      ),
+                    },
                     mapType: MapType.hybrid,
                     myLocationButtonEnabled: false,
                     myLocationEnabled:
                         _locationState == 'Current location active',
+                    scrollGesturesEnabled: true,
+                    zoomGesturesEnabled: true,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: true,
                     markers: {
                       Marker(
                         markerId: const MarkerId('selected-spot'),
@@ -850,6 +861,12 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
                     },
                     onCameraMove: (position) {
                       _mapTarget = position.target;
+                    },
+                    onCameraIdle: () {
+                      setState(() {
+                        _locationState =
+                            'Map centred at ${_mapTarget.latitude.toStringAsFixed(5)}, ${_mapTarget.longitude.toStringAsFixed(5)}';
+                      });
                     },
                   ),
           ),
@@ -878,8 +895,17 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
           title: 'Mapped evidence',
           icon: Icons.layers_outlined,
           children: [
-            Text(
-                'Depth, substrate, feature type and privacy level will attach to each spot.'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _SpotPin(label: 'Lake name', icon: Icons.label_outlined),
+                _SpotPin(label: 'Swim tag', icon: Icons.place_outlined),
+                _SpotPin(label: 'Depth map', icon: Icons.layers_outlined),
+                _SpotPin(label: '22 wraps', icon: Icons.straighten_outlined),
+                _SpotPin(label: '88 yards', icon: Icons.route_outlined),
+              ],
+            ),
           ],
         ),
       ],

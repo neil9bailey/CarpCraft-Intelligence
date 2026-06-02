@@ -84,6 +84,102 @@ class AppRepository {
     }
   }
 
+  Future<MockWeatherCondition> loadLiveWeatherConditions({
+    double latitude = 51.74778,
+    double longitude = -1.44076,
+    String locationLabel = 'Linear Fisheries Oxford',
+  }) async {
+    try {
+      final query = Uri(queryParameters: {
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'location_label': locationLabel,
+      }).query;
+      final response =
+          await api.getMap('/api/v1/weather-snapshots/live/conditions?$query');
+      return MockWeatherCondition.fromJson(response);
+    } on CarpCraftApiException {
+      return mockWeatherCondition;
+    }
+  }
+
+  Future<Map<String, dynamic>> createCaptureAsset({
+    required String category,
+    required String fileUri,
+    required String fileName,
+    required String markerLabel,
+    required double markerX,
+    required double markerY,
+    String? caption,
+    double? distanceYards,
+    double? distanceWraps,
+    double? depthM,
+    String bottomCondition = 'unknown',
+    List<String> weedConditions = const ['unknown'],
+    String algaeCondition = 'unknown',
+    String? waterClarityNotes,
+    String? rigNotes,
+    String? baitNotes,
+    bool publicContribution = false,
+  }) async {
+    final body = <String, dynamic>{
+      'category': category,
+      'file_uri': fileUri,
+      'file_name': fileName,
+      'caption': _blankToNull(caption),
+      'privacy_level': 'private',
+      'sharing_scope': publicContribution ? 'public' : 'private',
+      'public_sharing_consent': publicContribution,
+      'bottom_condition': bottomCondition,
+      'weed_conditions': weedConditions,
+      'algae_condition': algaeCondition,
+      'water_clarity_notes': _blankToNull(waterClarityNotes),
+      'depth_m': depthM,
+      'distance_yards': distanceYards,
+      'distance_wraps': distanceWraps,
+      'rig_notes': _blankToNull(rigNotes),
+      'bait_notes': _blankToNull(baitNotes),
+      'source_device': 'android',
+      'annotations': [
+        {
+          'annotation_type': 'marker',
+          'label': markerLabel.isEmpty ? 'Spot marker' : markerLabel,
+          'x1': markerX,
+          'y1': markerY,
+          'distance_yards': distanceYards,
+          'distance_wraps': distanceWraps,
+          'depth_m': depthM,
+          'bottom_condition': bottomCondition,
+          'weed_condition': weedConditions.isEmpty ? 'unknown' : weedConditions.first,
+        }
+      ],
+    };
+    try {
+      return await api.postMap('/api/v1/capture-assets', body);
+    } on CarpCraftApiException {
+      return body;
+    }
+  }
+
+  Future<MockIntelligenceBrief> loadExampleIntelligenceBrief() async {
+    try {
+      final response =
+          await api.getMap('/api/v1/ai-intelligence/example-live-session');
+      return MockIntelligenceBrief.fromJson(response);
+    } on CarpCraftApiException {
+      return mockIntelligenceBrief;
+    }
+  }
+
+  Future<MockProviderStatus> loadAnglingAIStatus() async {
+    try {
+      final response = await api.getMap('/api/v1/anglingai/status');
+      return MockProviderStatus.fromJson(response);
+    } on CarpCraftApiException {
+      return mockAnglingAIStatus;
+    }
+  }
+
   Future<MockRecommendation> generateRecommendation() async {
     try {
       final response = await api.postMap('/api/v1/recommendations/generate', {
@@ -110,4 +206,12 @@ class AppRepository {
       return mockRecommendation;
     }
   }
+}
+
+String? _blankToNull(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return null;
+  }
+  return trimmed;
 }

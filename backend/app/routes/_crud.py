@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,9 @@ from app.schemas.domain import Venue
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
 OWNER_FIELDS = {
+    "capture-assets": "owner_user_id",
+    "fishery-profiles": "owner_user_id",
+    "mcp-agent-runs": "owner_user_id",
     "venues": "owner_user_id",
     "sessions": "user_id",
 }
@@ -95,6 +98,10 @@ def _not_found(tag: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{tag} item not found")
 
 
+def _validation_detail(exc: ValidationError) -> list[dict[str, Any]]:
+    return [{key: value for key, value in error.items() if key != "ctx"} for error in exc.errors()]
+
+
 def build_crud_router(model_type: type[ModelT], tag: str) -> APIRouter:
     router = APIRouter(tags=[tag])
     resource_type = tag
@@ -131,6 +138,11 @@ def build_crud_router(model_type: type[ModelT], tag: str) -> APIRouter:
                     detail=f"{tag} parent belongs to a different user or does not exist",
                 )
             return build_repository(db, resource_type, model_type).create(parsed)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=_validation_detail(exc),
+            ) from exc
         except IntegrityError as exc:
             db.rollback()
             raise HTTPException(
@@ -160,7 +172,13 @@ def build_crud_router(model_type: type[ModelT], tag: str) -> APIRouter:
         existing = repository.get(item_id)
         if existing is None or not _is_accessible_by(existing, owner_field, parent_field, db, principal):
             raise _not_found(tag)
-        parsed = model_type.model_validate(item)
+        try:
+            parsed = model_type.model_validate(item)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=_validation_detail(exc),
+            ) from exc
         if owner_field is not None:
             parsed = parsed.model_copy(update={owner_field: principal.user_id})
         if not _parent_is_owned_by(parsed, parent_field, db, principal):

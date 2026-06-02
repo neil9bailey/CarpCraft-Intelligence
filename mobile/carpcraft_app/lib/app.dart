@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'core/app_theme.dart';
+import 'features/capture/capture_screens.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/recommendations/recommendation_screen.dart';
 import 'features/sessions/session_screens.dart';
 import 'features/settings/settings_screens.dart';
 import 'features/venues/venues_screens.dart';
+import 'features/weather/weather_screens.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -26,6 +28,8 @@ class AppRoutes {
   static const addCatch = '/sessions/catch/add';
   static const addBlank = '/sessions/blank/add';
   static const recommendation = '/recommendation';
+  static const capture = '/capture';
+  static const weather = '/weather';
   static const review = '/sessions/review';
   static const settings = '/settings';
   static const privacy = '/settings/privacy';
@@ -57,6 +61,8 @@ class CarpCraftApp extends StatelessWidget {
         AppRoutes.addCatch: (_) => const AddCatchScreen(),
         AppRoutes.addBlank: (_) => const AddBlankIntervalScreen(),
         AppRoutes.recommendation: (_) => const RecommendationScreen(),
+        AppRoutes.capture: (_) => const CaptureScreen(),
+        AppRoutes.weather: (_) => const WeatherScreen(),
         AppRoutes.review: (_) => const PostSessionReviewScreen(),
         AppRoutes.settings: (_) => const SettingsScreen(),
         AppRoutes.privacy: (_) => const PrivacyControlsScreen(),
