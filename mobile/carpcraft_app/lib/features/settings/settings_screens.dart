@@ -13,30 +13,10 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
-    with WidgetsBindingObserver {
+class _SettingsScreenState extends State<SettingsScreen> {
   final CarpCraftAuthService _authService = CarpCraftAuthService();
   bool _signingIn = false;
   bool _requestingLocation = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _markUncapturedAuthReturnIfNeeded();
-    }
-  }
 
   Future<void> _signIn() async {
     setState(() {
@@ -45,6 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     try {
       await _authService.signIn();
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microsoft sign-in opened.')),
+        );
         setState(() {});
       }
     } catch (error) {
@@ -58,20 +41,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           _signingIn = false;
         });
       }
-    }
-  }
-
-  Future<void> _markUncapturedAuthReturnIfNeeded() async {
-    await Future<void>.delayed(const Duration(seconds: 4));
-    if (!mounted) {
-      return;
-    }
-    final authState = AuthState.instance;
-    if (authState.signInInProgress && !authState.isSignedIn) {
-      authState.markSignInReturnedWithoutToken();
-      setState(() {
-        _signingIn = false;
-      });
     }
   }
 
@@ -111,7 +80,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     final signedIn = AuthState.instance.isSignedIn;
-    final signingIn = AuthState.instance.signInInProgress;
     final settings = AppSettingsState.instance;
     return CarpScaffold(
       title: 'Settings',
@@ -139,11 +107,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       },
                     )
                   : FilledButton.icon(
-                      onPressed:
-                          _signingIn || signingIn || !_authService.isConfigured
-                              ? null
-                              : _signIn,
-                      icon: _signingIn || signingIn
+                      onPressed: _signingIn || !_authService.isConfigured
+                          ? null
+                          : _signIn,
+                      icon: _signingIn
                           ? const SizedBox(
                               width: 16,
                               height: 16,

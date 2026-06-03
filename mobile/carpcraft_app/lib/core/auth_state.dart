@@ -55,6 +55,18 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void markSignInBrowserOpened() {
+    signInInProgress = true;
+    authStatusMessage = 'Complete Microsoft sign-in in the browser.';
+    notifyListeners();
+  }
+
+  void markAuthorizationCodeReceived() {
+    signInInProgress = true;
+    authStatusMessage = 'Microsoft sign-in returned; exchanging Entra token...';
+    notifyListeners();
+  }
+
   void markSignInFailed(String message) {
     signInInProgress = false;
     authStatusMessage = message;

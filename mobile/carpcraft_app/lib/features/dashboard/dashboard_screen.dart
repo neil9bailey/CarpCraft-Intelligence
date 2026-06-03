@@ -13,8 +13,7 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
-    with WidgetsBindingObserver {
+class _DashboardScreenState extends State<DashboardScreen> {
   static const String _buildSha = String.fromEnvironment(
     'CARPCRAFT_BUILD_SHA',
     defaultValue: 'local',
@@ -32,22 +31,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     _packageInfo = PackageInfo.fromPlatform();
-    WidgetsBinding.instance.addObserver(this);
     AuthState.instance.addListener(_authChanged);
   }
 
   @override
   void dispose() {
     AuthState.instance.removeListener(_authChanged);
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _markUncapturedAuthReturnIfNeeded();
-    }
   }
 
   void _authChanged() {
@@ -64,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       await _authService.signIn();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('DIIAC Entra sign-in complete.')),
+          const SnackBar(content: Text('Microsoft sign-in opened.')),
         );
       }
     } catch (error) {
@@ -78,20 +68,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           _signingIn = false;
         });
       }
-    }
-  }
-
-  Future<void> _markUncapturedAuthReturnIfNeeded() async {
-    await Future<void>.delayed(const Duration(seconds: 4));
-    if (!mounted) {
-      return;
-    }
-    final authState = AuthState.instance;
-    if (authState.signInInProgress && !authState.isSignedIn) {
-      authState.markSignInReturnedWithoutToken();
-      setState(() {
-        _signingIn = false;
-      });
     }
   }
 
@@ -140,12 +116,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       onPressed: () => _authService.signOut(),
                     )
                   : FilledButton.icon(
-                      onPressed: _signingIn ||
-                              authState.signInInProgress ||
-                              !_authService.isConfigured
+                      onPressed: _signingIn || !_authService.isConfigured
                           ? null
                           : _signIn,
-                      icon: _signingIn || authState.signInInProgress
+                      icon: _signingIn
                           ? const SizedBox(
                               width: 16,
                               height: 16,
