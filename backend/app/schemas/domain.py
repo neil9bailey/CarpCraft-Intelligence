@@ -638,6 +638,57 @@ class AnglingAIWaterTempRequest(ApiModel):
     water_type: str = "stillwater"
 
 
+class AnglingAIWeatherRequest(ApiModel):
+    location: str
+    target_species: str = "Carp"
+
+
+class AnglingAISolunarRequest(ApiModel):
+    location: str
+    days: int = Field(default=3, ge=1, le=14)
+
+
+class AnglingAISpawnAlertRequest(ApiModel):
+    water_temperature: float = Field(ge=0, le=40)
+    species: str | None = None
+
+
+class AnglingAIByelawCheckRequest(ApiModel):
+    water_type: str = "stillwater"
+    date: str | None = None
+    species: str | None = None
+    region: str | None = None
+
+
+class AnglingAIBaitCalculatorRequest(ApiModel):
+    duration_hours: float = Field(default=24, gt=0, le=168)
+    target_species: list[str] = Field(default_factory=lambda: ["Carp"])
+    methods: list[str] = Field(default_factory=lambda: ["boilie"])
+    water_type: str = "commercial-stillwater"
+    season: str | None = None
+
+
+class AnglingAIRigBuilderRequest(ApiModel):
+    target_species: str = "Carp"
+    water_type: str = "commercial-stillwater"
+    method: str = "method feeder"
+    generate_image: bool = False
+
+
+class AnglingAIFishDiseaseRequest(ApiModel):
+    image_url: str
+    context: str | None = None
+
+
+class AnglingAILakeMapFromLocationRequest(ApiModel):
+    lat: float
+    lng: float
+    name: str
+    peg_count: int | None = Field(default=None, ge=0)
+    amenities: list[str] = Field(default_factory=list)
+    features: list[str] = Field(default_factory=list)
+
+
 class AnglingAIVisionRequest(ApiModel):
     image_url: str
     prompt: str | None = None

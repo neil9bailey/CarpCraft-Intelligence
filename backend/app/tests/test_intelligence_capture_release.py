@@ -167,6 +167,26 @@ def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
         assert other_user_response.json() == []
 
 
+def test_fishery_catalogue_seed_query_creates_dynamic_advisory_profile(monkeypatch) -> None:
+    monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
+
+    with sqlite_client() as client:
+        seed_response = client.post(
+            "/api/v1/fishery-profiles/catalogue/seed",
+            params={"query": "Bluebell Lakes"},
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+
+        assert seed_response.status_code == 201
+        profile = seed_response.json()[0]
+        assert profile["display_name"] == "Bluebell Lakes"
+        assert profile["slug"] == "dynamic-bluebell-lakes"
+        assert profile["profile_status"] == "needs_review"
+        assert profile["privacy_level"] == "private"
+        assert any(section["category"] == "intelligence" for section in profile["sections"])
+        assert any("Dynamic profile is not source-pack verified" in gap for gap in profile["data_gaps"])
+
+
 def test_weather_conditions_include_surface_temp_and_data_gaps() -> None:
     condition = WeatherConditionService().enrich_snapshot(
         {

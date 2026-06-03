@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from json import dumps
 from typing import Protocol
 
 import httpx
@@ -181,6 +182,14 @@ class GooglePlacesConnector:
 
 class AnglingAIVenueResearchConnector:
     connector_name = "anglingai_venue_research"
+    advisory_fields = {
+        "recommendedMethods": "Recommended methods",
+        "baits": "Bait notes",
+        "bestSpots": "Best spots",
+        "seasonalPatterns": "Seasonal patterns",
+        "accessInfo": "Access information",
+        "rules": "Rules",
+    }
 
     @staticmethod
     def _confidence(data: dict[str, object]) -> int:
@@ -211,6 +220,12 @@ class AnglingAIVenueResearchConnector:
                 "Treat as advisory until source links and fishery rules are reviewed."
             )
         return f"AnglingAI Pro venue research returned advisory context for {venue.name}; review source links before importing facts."
+
+    @staticmethod
+    def _compact(value: object) -> str:
+        if isinstance(value, str):
+            return value[:700]
+        return dumps(value, ensure_ascii=True)[:700]
 
     def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
         response = AnglingAIService().venue_research(
@@ -256,6 +271,21 @@ class AnglingAIVenueResearchConnector:
                 "Use as external advisory evidence only. Import fishery facts after reviewing cited sources and current fishery rules.",
             )
         ]
+        for field_name, title in self.advisory_fields.items():
+            value = data.get(field_name)
+            if value in (None, "", [], {}):
+                continue
+            evidence.append(
+                _source(
+                    "AnglingAI",
+                    "external_ai_advisory_context",
+                    response.source_url,
+                    f"{title} for {venue.name}",
+                    self._compact(value),
+                    max(0, confidence - 5),
+                    "Advisory AnglingAI output. Review cited source links before normalizing as venue fact.",
+                )
+            )
         for source in sources[:5]:
             url = source.get("url")
             title = source.get("title")

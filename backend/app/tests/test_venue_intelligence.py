@@ -85,9 +85,14 @@ def test_venue_intelligence_lookup_returns_grounded_embryo_report() -> None:
     assert "Never disturb spawning fish." in report.ethical_warnings
 
 
-def test_venue_intelligence_rejects_unsupported_query() -> None:
-    with pytest.raises(ValueError):
-        _test_service().lookup("unknown syndicate water")
+def test_venue_intelligence_dynamic_query_returns_advisory_report() -> None:
+    report = _test_service().lookup("unknown syndicate water")
+
+    assert report.matched_key == "dynamic-unknown-syndicate-water"
+    assert report.suggested_venue.name == "unknown syndicate water"
+    assert report.confidence_score == 45
+    assert "Dynamic profile is not source-pack verified" in report.data_gaps[0]
+    assert "Never disturb spawning fish." in report.ethical_warnings
 
 
 def test_venue_intelligence_import_creates_private_venue_and_swims(client_with_venue_intelligence: TestClient) -> None:
@@ -230,7 +235,8 @@ def test_anglingai_venue_research_connector_adds_source_bound_evidence(monkeypat
     assert result.status.connector_name == "anglingai_venue_research"
     assert result.evidence[0].source_name == "AnglingAI"
     assert result.evidence[0].source_type == "external_ai_venue_research"
-    assert result.evidence[1].url == "https://www.linear-fisheries.co.uk/"
+    assert any(source.url == "https://www.linear-fisheries.co.uk/" for source in result.evidence)
+    assert any(source.source_type == "external_ai_advisory_context" for source in result.evidence)
 
     get_settings.cache_clear()
 

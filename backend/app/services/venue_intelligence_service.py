@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Any
 
 from app.schemas.domain import (
@@ -409,7 +410,10 @@ class VenueIntelligenceService:
         self.source_connectors = source_connectors if source_connectors is not None else default_venue_source_connectors()
 
     def lookup(self, query: str) -> VenueIntelligenceReport:
-        source_key, source_pack = self._match_pack(query)
+        try:
+            source_key, source_pack = self._match_pack(query)
+        except ValueError:
+            return self._lookup_dynamic(query)
         raw = source_pack.report
         venue = raw["suggested_venue"]
         weather = self._weather_for_venue(venue)
@@ -437,6 +441,77 @@ class VenueIntelligenceService:
                 "Follow fishery rules, fish care requirements and local law before acting on any recommendation.",
             ],
         )
+
+    def _lookup_dynamic(self, query: str) -> VenueIntelligenceReport:
+        venue_name = " ".join(query.strip().split()) or "Unknown fishery"
+        matched_key = f"dynamic-{self._slug(venue_name)}"[:64]
+        venue = Venue(
+            id=matched_key,
+            name=venue_name,
+            type=VenueType.unknown,
+            location_label=None,
+            privacy_level=PrivacyLevel.private,
+        )
+        connector_statuses, connector_evidence, external_place = self._run_source_connectors(query, venue)
+        enriched_venue = self._venue_with_external_location(venue, external_place)
+        weather = self._weather_for_venue(enriched_venue)
+        anglingai_active = any(
+            status.connector_name == "anglingai_venue_research" and status.status == "active"
+            for status in connector_statuses
+        )
+        google_active = external_place is not None
+        confidence_score = 72 if anglingai_active and google_active else 60 if anglingai_active else 45
+        advisory_items = [
+            evidence.summary
+            for evidence in connector_evidence
+            if evidence.source_type.startswith("external_ai")
+        ]
+        location_tail = f" near {external_place.formatted_address}" if external_place and external_place.formatted_address else ""
+        summary = (
+            f"{venue_name}{location_tail} has a dynamic CarpCraft profile built from AnglingAI venue research and directory/source links. "
+            "Treat this profile as advisory until fishery rules, costs, access and maps are reviewed from cited sources."
+        )
+        if advisory_items:
+            summary = f"{summary} AnglingAI returned advisory context for: {', '.join(self._advisory_titles(connector_evidence))}."
+        return VenueIntelligenceReport(
+            query=query,
+            matched_key=matched_key,
+            confidence_score=confidence_score,
+            suggested_venue=enriched_venue,
+            summary=summary,
+            external_place=external_place,
+            swims=[],
+            map_assets=[],
+            news_items=[],
+            catch_reports=[],
+            source_evidence=connector_evidence,
+            connector_statuses=connector_statuses,
+            weather=weather,
+            licensing_notes=[],
+            data_gaps=[
+                "Dynamic profile is not source-pack verified; review cited official fishery pages before trusting rules, costs, access or lake details.",
+                "AnglingAI output is advisory evidence and must be grounded against current fishery sources and your private session logs.",
+                "Lake/swim/depth maps need fishery-approved links or licensing review before caching.",
+            ],
+            ethical_warnings=[
+                "Never disturb spawning fish.",
+                "Follow fishery rules, fish care requirements and local law before acting on any recommendation.",
+            ],
+        )
+
+    @staticmethod
+    def _slug(value: str) -> str:
+        normalized = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+        return normalized or "fishery"
+
+    @staticmethod
+    def _advisory_titles(evidence: list[VenueSourceEvidence]) -> list[str]:
+        titles = [
+            item.title
+            for item in evidence
+            if item.source_name == "AnglingAI" and item.source_type == "external_ai_advisory_context"
+        ]
+        return titles[:5] or ["venue research"]
 
     def _match_pack(self, query: str) -> tuple[str, VenueIntelligenceSourcePack]:
         normalized = query.strip().lower()

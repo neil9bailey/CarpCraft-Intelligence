@@ -95,6 +95,20 @@ def _profile_sections(
         if venue.approximate_latitude is not None and venue.approximate_longitude is not None
         else "Coordinates not normalized yet."
     )
+    anglingai_items = [
+        status.summary
+        for status in report.connector_statuses
+        if status.connector_name == "anglingai_venue_research"
+    ] + [
+        source.summary
+        for source in report.source_evidence
+        if source.source_name == "AnglingAI" and source.source_type.startswith("external_ai")
+    ][:6]
+    anglingai_urls = [
+        source.url
+        for source in report.source_evidence
+        if source.source_name == "AnglingAI" and source.url
+    ]
     return [
         _section(
             "location",
@@ -104,6 +118,15 @@ def _profile_sections(
             if report.external_place and report.external_place.google_maps_uri
             else _source_urls(report, "official"),
             confidence=report.confidence_score,
+        ),
+        _section(
+            "intelligence",
+            "AnglingAI Pro research",
+            anglingai_items
+            or ["AnglingAI venue research has not returned usable advisory evidence for this profile yet."],
+            list(dict.fromkeys(anglingai_urls or ["https://anglingai.co.uk/docs"])),
+            summary="External AI output is advisory and needs review against source links, fishery rules and private CarpCraft logs.",
+            confidence=65 if anglingai_items else 30,
         ),
         _section(
             "access",
