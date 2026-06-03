@@ -13,7 +13,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   static const String _buildSha = String.fromEnvironment(
     'CARPCRAFT_BUILD_SHA',
     defaultValue: 'local',
@@ -31,13 +32,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _packageInfo = PackageInfo.fromPlatform();
+    WidgetsBinding.instance.addObserver(this);
     AuthState.instance.addListener(_authChanged);
   }
 
   @override
   void dispose() {
     AuthState.instance.removeListener(_authChanged);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _markUncapturedAuthReturnIfNeeded();
+    }
   }
 
   void _authChanged() {
@@ -68,6 +78,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _signingIn = false;
         });
       }
+    }
+  }
+
+  Future<void> _markUncapturedAuthReturnIfNeeded() async {
+    await Future<void>.delayed(const Duration(seconds: 4));
+    if (!mounted) {
+      return;
+    }
+    final authState = AuthState.instance;
+    if (authState.signInInProgress && !authState.isSignedIn) {
+      authState.markSignInReturnedWithoutToken();
+      setState(() {
+        _signingIn = false;
+      });
     }
   }
 
@@ -142,6 +166,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ? Icons.check_circle_outline
                   : Icons.info_outline,
               text: authState.authStatusMessage,
+            ),
+            _DashboardLine(
+              icon: Icons.vpn_key_outlined,
+              text:
+                  'Auth ${CarpCraftAuthService.clientIdSummary} | ${CarpCraftAuthService.scopeSummary} | oauthredirect',
             ),
             FutureBuilder<PackageInfo>(
               future: _packageInfo,

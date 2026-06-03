@@ -7,6 +7,7 @@ class AuthState extends ChangeNotifier {
 
   String? accessToken;
   String? accountLabel;
+  DateTime? accessTokenExpiresAt;
   bool apiAuthRequired = false;
   bool signInInProgress = false;
   String authStatusMessage = 'Not signed in.';
@@ -14,12 +15,18 @@ class AuthState extends ChangeNotifier {
 
   bool get isSignedIn => accessToken != null && accessToken!.isNotEmpty;
 
-  void setSession({required String token, String? label}) {
+  void setSession({
+    required String token,
+    String? label,
+    DateTime? expiresAt,
+    String statusMessage = 'DIIAC Entra sign-in complete.',
+  }) {
     accessToken = token;
     accountLabel = label;
+    accessTokenExpiresAt = expiresAt;
     apiAuthRequired = false;
     signInInProgress = false;
-    authStatusMessage = 'DIIAC Entra sign-in complete.';
+    authStatusMessage = statusMessage;
     lastApiAuthMessage = null;
     notifyListeners();
   }
@@ -27,6 +34,7 @@ class AuthState extends ChangeNotifier {
   void clear() {
     accessToken = null;
     accountLabel = null;
+    accessTokenExpiresAt = null;
     apiAuthRequired = false;
     signInInProgress = false;
     authStatusMessage = 'Signed out.';
@@ -50,6 +58,14 @@ class AuthState extends ChangeNotifier {
   void markSignInFailed(String message) {
     signInInProgress = false;
     authStatusMessage = message;
+    notifyListeners();
+  }
+
+  void markSignInReturnedWithoutToken() {
+    signInInProgress = false;
+    authStatusMessage =
+        'Returned from Microsoft sign-in, but no Entra token was captured. '
+        'Retry once; if it repeats, capture Android auth logs.';
     notifyListeners();
   }
 }

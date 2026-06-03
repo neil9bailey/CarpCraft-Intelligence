@@ -13,10 +13,30 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   final CarpCraftAuthService _authService = CarpCraftAuthService();
   bool _signingIn = false;
   bool _requestingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _markUncapturedAuthReturnIfNeeded();
+    }
+  }
 
   Future<void> _signIn() async {
     setState(() {
@@ -38,6 +58,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _signingIn = false;
         });
       }
+    }
+  }
+
+  Future<void> _markUncapturedAuthReturnIfNeeded() async {
+    await Future<void>.delayed(const Duration(seconds: 4));
+    if (!mounted) {
+      return;
+    }
+    final authState = AuthState.instance;
+    if (authState.signInInProgress && !authState.isSignedIn) {
+      authState.markSignInReturnedWithoutToken();
+      setState(() {
+        _signingIn = false;
+      });
     }
   }
 
@@ -121,6 +155,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _SettingsLine(
               icon: signedIn ? Icons.check_circle_outline : Icons.info_outline,
               text: AuthState.instance.authStatusMessage,
+            ),
+            _SettingsLine(
+              icon: Icons.vpn_key_outlined,
+              text:
+                  'Auth ${CarpCraftAuthService.clientIdSummary} | ${CarpCraftAuthService.scopeSummary} | oauthredirect',
             ),
           ],
         ),
