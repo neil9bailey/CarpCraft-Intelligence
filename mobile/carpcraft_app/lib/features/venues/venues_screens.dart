@@ -42,7 +42,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
   void initState() {
     super.initState();
     _venues = _repository.loadVenues();
-    _catalogue = _repository.searchFisheryCatalogue('');
+    _catalogue = _repository.loadFisheryCatalogue();
   }
 
   @override
@@ -62,7 +62,9 @@ class _VenueListScreenState extends State<VenueListScreen> {
       _catalogueBusy = true;
     });
     try {
-      final profiles = await _repository.seedFisheryCatalogue();
+      final query = _catalogueQueryController.text.trim();
+      final profiles = await _repository.seedFisheryCatalogue(
+          query: query.isEmpty ? null : query);
       if (mounted) {
         setState(() {
           _catalogue = Future.value(profiles);
@@ -168,7 +170,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
                 }
                 return Column(
                   children: [
-                    for (final profile in profiles.take(5))
+                    for (final profile in profiles)
                       _FisheryProfileCard(
                         profile: profile,
                         onMap: () => _openFisheryMap(profile),
@@ -1027,6 +1029,7 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
   double _tilt = 0;
   CameraPosition? _lastCameraPosition;
   bool _loadedRouteArgs = false;
+  bool _currentLocationActive = false;
 
   @override
   void didChangeDependencies() {
@@ -1047,6 +1050,7 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       setState(() {
+        _currentLocationActive = false;
         _locationState = 'Location services disabled';
       });
       return;
@@ -1062,6 +1066,7 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
         await Geolocator.openAppSettings();
       }
       setState(() {
+        _currentLocationActive = false;
         _locationState = 'Location not allowed';
       });
       return;
@@ -1073,18 +1078,21 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     AppSettingsState.instance.setPreciseLocationEnabled(true);
     final target = LatLng(position.latitude, position.longitude);
     setState(() {
+      _currentLocationActive = true;
       _mapTarget = target;
       _locationState =
           'Current location active, accuracy ${position.accuracy.toStringAsFixed(0)} m';
     });
     await _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(target: target, zoom: _zoom, bearing: _bearing, tilt: _tilt),
+      CameraPosition(
+          target: target, zoom: _zoom, bearing: _bearing, tilt: _tilt),
     ));
   }
 
   Future<void> _recenterMap() async {
     await _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(target: _mapTarget, zoom: _zoom, bearing: _bearing, tilt: _tilt),
+      CameraPosition(
+          target: _mapTarget, zoom: _zoom, bearing: _bearing, tilt: _tilt),
     ));
   }
 
@@ -1108,220 +1116,341 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     };
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return CarpScaffold(
-      title: 'Spot map',
-      children: [
-        Container(
-          height: 360,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE6EFE8),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFC8D9CE)),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: _googleMapsApiKey.isEmpty
-                ? Stack(
-                    children: [
-                      Positioned.fill(
-                        child: CustomPaint(painter: _MapGridPainter()),
-                      ),
-                      const Positioned(
-                        left: 36,
-                        top: 54,
-                        child: _SpotPin(
-                            label: 'Reedline', icon: Icons.grass_outlined),
-                      ),
-                      const Positioned(
-                        right: 42,
-                        bottom: 70,
-                        child: _SpotPin(
-                            label: 'Gravel bar', icon: Icons.terrain_outlined),
-                      ),
-                      const Center(
-                        child: Icon(Icons.map_outlined,
-                            size: 56, color: Color(0xFF176B5B)),
-                      ),
-                    ],
-                  )
-                : GoogleMap(
-                    initialCameraPosition:
-                        CameraPosition(target: _mapTarget, zoom: _zoom),
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                    },
-                    gestureRecognizers: {
-                      Factory<OneSequenceGestureRecognizer>(
-                        () => EagerGestureRecognizer(),
-                      ),
-                    },
-                    mapType: _mapType,
-                    compassEnabled: true,
-                    mapToolbarEnabled: true,
-                    zoomControlsEnabled: true,
-                    minMaxZoomPreference: const MinMaxZoomPreference(5, 21),
-                    myLocationButtonEnabled: false,
-                    myLocationEnabled:
-                        _locationState == 'Current location active',
-                    scrollGesturesEnabled: true,
-                    zoomGesturesEnabled: true,
-                    rotateGesturesEnabled: true,
-                    tiltGesturesEnabled: true,
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId('selected-spot'),
-                        position: _mapTarget,
-                        infoWindow: InfoWindow(title: _mapTitle),
-                      ),
-                    },
-                    onCameraMove: (position) {
-                      _lastCameraPosition = position;
-                    },
-                    onCameraIdle: () {
-                      final position = _lastCameraPosition;
-                      if (position != null) {
-                        _mapTarget = position.target;
-                        _zoom = position.zoom;
-                        _bearing = position.bearing;
-                        _tilt = position.tilt;
-                      }
-                      setState(() {
-                        _locationState =
-                            'Map centred at ${_mapTarget.latitude.toStringAsFixed(5)}, ${_mapTarget.longitude.toStringAsFixed(5)}';
-                      });
-                    },
-                  ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Map tools',
-          icon: Icons.tune_outlined,
+  void _tagMapCenter() {
+    setState(() {
+      _mapTitle = 'Tagged spot';
+      _locationState =
+          'Tagged at ${_mapTarget.latitude.toStringAsFixed(5)}, ${_mapTarget.longitude.toStringAsFixed(5)}';
+    });
+  }
+
+  void _setPinnedSpot(LatLng target) {
+    setState(() {
+      _mapTarget = target;
+      _mapTitle = 'Pinned spot';
+      _locationState =
+          'Pinned at ${target.latitude.toStringAsFixed(5)}, ${target.longitude.toStringAsFixed(5)}';
+    });
+  }
+
+  void _syncMapCamera() {
+    final position = _lastCameraPosition;
+    if (position != null) {
+      _mapTarget = position.target;
+      _zoom = position.zoom;
+      _bearing = position.bearing;
+      _tilt = position.tilt;
+    }
+    setState(() {
+      _locationState =
+          'Map centred at ${_mapTarget.latitude.toStringAsFixed(5)}, ${_mapTarget.longitude.toStringAsFixed(5)}';
+    });
+  }
+
+  Widget _buildNavigationDrawer(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 12),
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<MapType>(
-                segments: const [
-                  ButtonSegment(
-                      value: MapType.hybrid,
-                      icon: Icon(Icons.satellite_alt_outlined),
-                      label: Text('Hybrid')),
-                  ButtonSegment(
-                      value: MapType.satellite,
-                      icon: Icon(Icons.public_outlined),
-                      label: Text('Satellite')),
-                  ButtonSegment(
-                      value: MapType.terrain,
-                      icon: Icon(Icons.terrain_outlined),
-                      label: Text('Terrain')),
-                  ButtonSegment(
-                      value: MapType.normal,
-                      icon: Icon(Icons.map_outlined),
-                      label: Text('Map')),
-                ],
-                selected: {_mapType},
-                onSelectionChanged: (selection) {
-                  setState(() {
-                    _mapType = selection.first;
-                  });
+            const ListTile(
+              leading: Icon(Icons.insights),
+              title: Text('CarpCraft Intelligence'),
+              subtitle: Text('Private by default'),
+            ),
+            const Divider(),
+            for (final destination in mainDestinations)
+              ListTile(
+                leading: Icon(destination.icon),
+                title: Text(destination.label),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacementNamed(context, destination.route);
                 },
               ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _googleMapsApiKey.isEmpty ? null : _recenterMap,
-                  icon: const Icon(Icons.center_focus_strong_outlined),
-                  label: const Text('Recenter'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _openMaps,
-                  icon: const Icon(Icons.open_in_new),
-                  label: const Text('Google Maps'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _openEarth,
-                  icon: const Icon(Icons.public_outlined),
-                  label: const Text('Google Earth'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _InfoChip(icon: Icons.layers_outlined, label: _mapTypeLabel),
-                _InfoChip(
-                    icon: Icons.zoom_in_outlined,
-                    label: 'z${_zoom.toStringAsFixed(1)}'),
-                _InfoChip(
-                    icon: Icons.explore_outlined,
-                    label: '${_bearing.toStringAsFixed(0)} deg'),
-              ],
-            ),
           ],
         ),
-        const SizedBox(height: 12),
-        SectionCard(
-          title: 'Location',
-          icon: Icons.my_location_outlined,
-          children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: AppSettingsState.instance.preciseLocationEnabled,
-              onChanged: (value) {
-                if (value) {
-                  _useCurrentLocation();
-                } else {
-                  AppSettingsState.instance.setPreciseLocationEnabled(false);
-                  setState(() {
-                    _locationState = 'Location off';
-                  });
-                }
-              },
-              title: const Text('Precise GPS for this session'),
-              subtitle: const Text(
-                  'Enabled only when you choose to use current location.'),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: Text(_mapTitle),
-              subtitle: Text(
-                  '$_locationState. Precise location is only used when you choose it.'),
-              trailing: IconButton(
-                tooltip: 'Use current location',
-                icon: const Icon(Icons.gps_fixed),
-                onPressed: _useCurrentLocation,
+      ),
+    );
+  }
+
+  Widget _buildFallbackMap() {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(painter: _MapGridPainter()),
+        ),
+        const Positioned(
+          left: 36,
+          top: 54,
+          child: _SpotPin(label: 'Reedline', icon: Icons.grass_outlined),
+        ),
+        const Positioned(
+          right: 42,
+          bottom: 70,
+          child: _SpotPin(label: 'Gravel bar', icon: Icons.terrain_outlined),
+        ),
+        const Center(
+          child: Icon(Icons.map_outlined, size: 56, color: Color(0xFF176B5B)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMapSurface(BuildContext context) {
+    final canUseGoogleMap = _googleMapsApiKey.isNotEmpty;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: canUseGoogleMap
+              ? GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _mapTarget,
+                    zoom: _zoom,
+                    bearing: _bearing,
+                    tilt: _tilt,
+                  ),
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                  },
+                  gestureRecognizers: {
+                    Factory<OneSequenceGestureRecognizer>(
+                      () => EagerGestureRecognizer(),
+                    ),
+                  },
+                  mapType: _mapType,
+                  compassEnabled: true,
+                  liteModeEnabled: false,
+                  mapToolbarEnabled: true,
+                  zoomControlsEnabled: false,
+                  minMaxZoomPreference: const MinMaxZoomPreference(5, 21),
+                  myLocationButtonEnabled: false,
+                  myLocationEnabled: _currentLocationActive &&
+                      AppSettingsState.instance.preciseLocationEnabled,
+                  scrollGesturesEnabled: true,
+                  zoomGesturesEnabled: true,
+                  rotateGesturesEnabled: true,
+                  tiltGesturesEnabled: true,
+                  padding: const EdgeInsets.fromLTRB(0, 72, 0, 84),
+                  markers: {
+                    Marker(
+                      markerId: const MarkerId('selected-spot'),
+                      position: _mapTarget,
+                      infoWindow: InfoWindow(title: _mapTitle),
+                    ),
+                  },
+                  onLongPress: _setPinnedSpot,
+                  onCameraMove: (position) {
+                    _lastCameraPosition = position;
+                  },
+                  onCameraIdle: _syncMapCamera,
+                )
+              : _buildFallbackMap(),
+        ),
+        Positioned(
+          left: 12,
+          top: 12,
+          right: 12,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoChip(icon: Icons.layers_outlined, label: _mapTypeLabel),
+              _InfoChip(
+                  icon: Icons.zoom_in_outlined,
+                  label: 'z${_zoom.toStringAsFixed(1)}'),
+              _InfoChip(
+                  icon: Icons.explore_outlined,
+                  label: '${_bearing.toStringAsFixed(0)} deg'),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 12,
+          bottom: 12,
+          child: FilledButton.tonalIcon(
+            onPressed: canUseGoogleMap ? _tagMapCenter : null,
+            icon: const Icon(Icons.add_location_alt_outlined),
+            label: const Text('Tag centre'),
+          ),
+        ),
+        Positioned(
+          right: 12,
+          bottom: 12,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton.filledTonal(
+                tooltip: 'Recenter',
+                onPressed: canUseGoogleMap ? _recenterMap : null,
+                icon: const Icon(Icons.center_focus_strong_outlined),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              IconButton.filledTonal(
+                tooltip: 'Use current location',
+                onPressed: _useCurrentLocation,
+                icon: const Icon(Icons.gps_fixed),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMapTools() {
+    return SectionCard(
+      title: 'Map tools',
+      icon: Icons.tune_outlined,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SegmentedButton<MapType>(
+            segments: const [
+              ButtonSegment(
+                  value: MapType.hybrid,
+                  icon: Icon(Icons.satellite_alt_outlined),
+                  label: Text('Hybrid')),
+              ButtonSegment(
+                  value: MapType.satellite,
+                  icon: Icon(Icons.public_outlined),
+                  label: Text('Satellite')),
+              ButtonSegment(
+                  value: MapType.terrain,
+                  icon: Icon(Icons.terrain_outlined),
+                  label: Text('Terrain')),
+              ButtonSegment(
+                  value: MapType.normal,
+                  icon: Icon(Icons.map_outlined),
+                  label: Text('Map')),
+            ],
+            selected: {_mapType},
+            onSelectionChanged: (selection) {
+              setState(() {
+                _mapType = selection.first;
+              });
+            },
+          ),
         ),
         const SizedBox(height: 12),
-        const SectionCard(
-          title: 'Mapped evidence',
-          icon: Icons.layers_outlined,
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _SpotPin(label: 'Lake name', icon: Icons.label_outlined),
-                _SpotPin(label: 'Swim tag', icon: Icons.place_outlined),
-                _SpotPin(label: 'Depth map', icon: Icons.layers_outlined),
-                _SpotPin(label: '22 wraps', icon: Icons.straighten_outlined),
-                _SpotPin(label: '88 yards', icon: Icons.route_outlined),
-              ],
+            OutlinedButton.icon(
+              onPressed: _googleMapsApiKey.isEmpty ? null : _recenterMap,
+              icon: const Icon(Icons.center_focus_strong_outlined),
+              label: const Text('Recenter'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _googleMapsApiKey.isEmpty ? null : _tagMapCenter,
+              icon: const Icon(Icons.add_location_alt_outlined),
+              label: const Text('Tag centre'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _openMaps,
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Google Maps'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _openEarth,
+              icon: const Icon(Icons.public_outlined),
+              label: const Text('Google Earth'),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildLocationPanel() {
+    return SectionCard(
+      title: 'Location',
+      icon: Icons.my_location_outlined,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: AppSettingsState.instance.preciseLocationEnabled,
+          onChanged: (value) {
+            if (value) {
+              _useCurrentLocation();
+            } else {
+              AppSettingsState.instance.setPreciseLocationEnabled(false);
+              setState(() {
+                _currentLocationActive = false;
+                _locationState = 'Location off';
+              });
+            }
+          },
+          title: const Text('Precise GPS for this session'),
+          subtitle: const Text(
+              'Enabled only when you choose to use current location.'),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: Text(_mapTitle),
+          subtitle: Text(
+              '$_locationState. Precise location is only used when you choose it.'),
+          trailing: IconButton(
+            tooltip: 'Use current location',
+            icon: const Icon(Icons.gps_fixed),
+            onPressed: _useCurrentLocation,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMappedEvidencePanel() {
+    return const SectionCard(
+      title: 'Mapped evidence',
+      icon: Icons.layers_outlined,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _SpotPin(label: 'Lake name', icon: Icons.label_outlined),
+            _SpotPin(label: 'Swim tag', icon: Icons.place_outlined),
+            _SpotPin(label: 'Depth map', icon: Icons.layers_outlined),
+            _SpotPin(label: '22 wraps', icon: Icons.straighten_outlined),
+            _SpotPin(label: '88 yards', icon: Icons.route_outlined),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Spot map')),
+      drawer: _buildNavigationDrawer(context),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(flex: 6, child: _buildMapSurface(context)),
+            Expanded(
+              flex: 4,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildMapTools(),
+                    const SizedBox(height: 12),
+                    _buildLocationPanel(),
+                    const SizedBox(height: 12),
+                    _buildMappedEvidencePanel(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

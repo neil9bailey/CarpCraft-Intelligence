@@ -84,10 +84,21 @@ class AppRepository {
     }
   }
 
-  Future<List<MockFisheryProfile>> seedFisheryCatalogue() async {
+  Future<List<MockFisheryProfile>> loadFisheryCatalogue() async {
+    final profiles = await searchFisheryCatalogue('');
+    if (profiles.isNotEmpty) {
+      return profiles;
+    }
+    return seedFisheryCatalogue();
+  }
+
+  Future<List<MockFisheryProfile>> seedFisheryCatalogue({String? query}) async {
     try {
-      final response =
-          await api.postList('/api/v1/fishery-profiles/catalogue/seed', {});
+      final normalized = query?.trim();
+      final path = normalized == null || normalized.isEmpty
+          ? '/api/v1/fishery-profiles/catalogue/seed'
+          : '/api/v1/fishery-profiles/catalogue/seed?query=${Uri.encodeQueryComponent(normalized)}';
+      final response = await api.postList(path, {});
       final profiles = response
           .whereType<Map<String, dynamic>>()
           .map(MockFisheryProfile.fromJson)
@@ -101,8 +112,8 @@ class AppRepository {
   Future<List<MockFisheryProfile>> searchFisheryCatalogue(String query) async {
     try {
       final encodedQuery = Uri.encodeQueryComponent(query);
-      final response = await api
-          .getList('/api/v1/fishery-profiles/catalogue/search?query=$encodedQuery');
+      final response = await api.getList(
+          '/api/v1/fishery-profiles/catalogue/search?query=$encodedQuery');
       final profiles = response
           .whereType<Map<String, dynamic>>()
           .map(MockFisheryProfile.fromJson)
@@ -194,7 +205,8 @@ class AppRepository {
           'distance_wraps': distanceWraps,
           'depth_m': depthM,
           'bottom_condition': bottomCondition,
-          'weed_condition': weedConditions.isEmpty ? 'unknown' : weedConditions.first,
+          'weed_condition':
+              weedConditions.isEmpty ? 'unknown' : weedConditions.first,
         }
       ],
     };
