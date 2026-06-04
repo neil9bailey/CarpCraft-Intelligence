@@ -883,6 +883,10 @@ class Recommendation(ApiModel):
     data_gaps: list[str] = Field(default_factory=list)
     evidence_summary: list[str] = Field(default_factory=list)
     alternative_plan: str
+    seasonal_context: str | None = None
+    barometric_note: str | None = None
+    prime_feeding_windows: list[str] = Field(default_factory=list)
+    priority_actions: list[str] = Field(default_factory=list)
 
 
 class RecommendationOutcome(ApiModel):

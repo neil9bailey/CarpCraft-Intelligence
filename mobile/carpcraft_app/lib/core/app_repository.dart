@@ -265,6 +265,20 @@ class AppRepository {
       return mockRecommendation;
     }
   }
+
+  /// Generates a recommendation from a live session's logged evidence
+  /// (water readings, weather snapshot, observations, venue history and
+  /// recent catches). Falls back to the offline demo plan when unavailable.
+  Future<MockRecommendation> generateSessionPlan(String sessionId) async {
+    try {
+      final encoded = Uri.encodeComponent(sessionId);
+      final response = await api
+          .postMap('/api/v1/recommendations/session/$encoded/plan', {});
+      return MockRecommendation.fromJson(response);
+    } on CarpCraftApiException {
+      return mockRecommendation;
+    }
+  }
 }
 
 String? _blankToNull(String? value) {

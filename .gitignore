@@ -26,6 +26,8 @@ local.properties
 hs_err_pid*.log
 *.jks
 *.keystore
+key.properties
+mobile/carpcraft_app/android/key.properties
 
 # Editors / OS
 .idea/

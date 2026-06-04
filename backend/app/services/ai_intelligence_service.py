@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.ai.rag_retriever import RagRetriever, RetrievalRequest
 from app.core.auth import Principal
 from app.schemas.domain import (
     AIEvidenceItem,
@@ -9,6 +10,17 @@ from app.schemas.domain import (
     WeedCondition,
 )
 
+# Knowledge categories the live brief grounds against (private notes excluded;
+# those require a caller-side access check before they are passed in).
+_BRIEF_KNOWLEDGE_CATEGORIES = [
+    "water_temperature_and_metabolism",
+    "dissolved_oxygen_and_weed_dynamics",
+    "weather_wind_pressure_and_light",
+    "baiting_strategy",
+    "rig_and_presentation_logic",
+    "seasonal_behaviour_and_spawning",
+]
+
 
 def _enum_values(values: list[object]) -> set[str]:
     return {getattr(value, "value", str(value)) for value in values}
@@ -16,6 +28,29 @@ def _enum_values(values: list[object]) -> set[str]:
 
 class AIIntelligenceService:
     """Grounded advisory brief builder for future AI/MCP orchestration."""
+
+    def __init__(self, retriever: RagRetriever | None = None) -> None:
+        self.retriever = retriever or RagRetriever()
+
+    def _ground_with_knowledge(self, context: AIIntelligenceBriefInput) -> list[AIEvidenceItem]:
+        query_parts = list(context.observations)
+        if context.weather is not None and context.weather.wind_direction_label:
+            query_parts.append(f"{context.weather.wind_direction_label} wind pressure")
+        if context.live_session_notes:
+            query_parts.append(context.live_session_notes)
+        query = " ".join(query_parts) if query_parts else "carp watercraft conditions"
+
+        retrieved = self.retriever.retrieve(
+            RetrievalRequest(query=query, categories=list(_BRIEF_KNOWLEDGE_CATEGORIES), limit=3)
+        )
+        return [
+            AIEvidenceItem(
+                source_type="knowledge",
+                summary=f"{item.title}: {item.snippet}",
+                confidence=min(60, 40 + round(item.score * 10)),
+            )
+            for item in retrieved
+        ]
 
     def build_brief(self, context: AIIntelligenceBriefInput, principal: Principal) -> AIIntelligenceBrief:
         evidence: list[AIEvidenceItem] = []
@@ -135,6 +170,11 @@ class AIIntelligenceService:
             recommendations = ["Pause angling pressure around suspected spawning activity and move away from fish showing spawning behaviour."]
             safety_warnings.insert(0, "Spawning indicators were logged; welfare overrides tactical recommendations.")
             confidence = min(confidence, 45)
+
+        knowledge_evidence = self._ground_with_knowledge(context)
+        if knowledge_evidence:
+            evidence.extend(knowledge_evidence)
+            confidence += min(len(knowledge_evidence) * 2, 6)
 
         if not recommendations:
             recommendations.append("Start with observation: wind, shows, liners, water clarity, depth and bottom feel before committing a main area.")

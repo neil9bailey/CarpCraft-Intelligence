@@ -527,6 +527,10 @@ class MockRecommendation {
     required this.dataGaps,
     required this.alternativePlan,
     this.fishWelfareWarning,
+    this.priorityActions = const [],
+    this.primeFeedingWindows = const [],
+    this.seasonalContext,
+    this.barometricNote,
   });
 
   final int biteOpportunity;
@@ -539,6 +543,10 @@ class MockRecommendation {
   final List<String> dataGaps;
   final String alternativePlan;
   final String? fishWelfareWarning;
+  final List<String> priorityActions;
+  final List<String> primeFeedingWindows;
+  final String? seasonalContext;
+  final String? barometricNote;
 
   factory MockRecommendation.fromJson(Map<String, dynamic> json) {
     final locationScore = _intValue(json['location_score']);
@@ -560,6 +568,10 @@ class MockRecommendation {
       alternativePlan: json['alternative_plan'] as String? ??
           'Keep one option mobile and review outcomes.',
       fishWelfareWarning: json['fish_welfare_warning'] as String?,
+      priorityActions: _stringList(json['priority_actions']),
+      primeFeedingWindows: _stringList(json['prime_feeding_windows']),
+      seasonalContext: json['seasonal_context'] as String?,
+      barometricNote: json['barometric_note'] as String?,
     );
   }
 }
@@ -1037,6 +1049,19 @@ const mockRecommendation = MockRecommendation(
   ],
   alternativePlan:
       'If the move produces only liners, adjust depth or presentation before adding bait.',
+  priorityActions: [
+    'Check the windward bank where sustained wind has been pushing.',
+    'Act on shows away from the rods with an observation-led move or one mobile rod.',
+    'Liners without takes: re-check presentation, depth and whether fish are off bottom.',
+  ],
+  primeFeedingWindows: [
+    'First light',
+    'Last light into dark',
+  ],
+  seasonalContext:
+      'Summer: best feeding is often at first light, last light and through the night; watch oxygen in heat.',
+  barometricNote:
+      'Pressure is easing lower, which is a mild positive feeding sign.',
 );
 
 const mockWeatherCondition = MockWeatherCondition(
