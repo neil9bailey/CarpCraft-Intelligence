@@ -15,6 +15,36 @@ from app.services.condition_service import WeatherConditionService
 from app.services.venue_intelligence_service import VenueIntelligenceService
 
 
+def _enable_live_anglingai(monkeypatch) -> None:  # noqa: ANN001
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")
+
+    def fake_post(url, json, headers, timeout):  # noqa: ANN001
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "venueName": json.get("venueName", "Test fishery"),
+                    "recommendedMethods": ["solid bags"],
+                    "bestSpots": ["review cited sources before normalising"],
+                    "rules": ["check current fishery rules"],
+                    "confidence": {"score": 82},
+                    "sources": [
+                        {
+                            "url": "https://anglingai.co.uk/docs",
+                            "title": "AnglingAI API documentation",
+                        }
+                    ],
+                },
+                "sourceCount": 1,
+            },
+            headers={"content-type": "application/json"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+
 @contextmanager
 def sqlite_client() -> Generator[TestClient, None, None]:
     engine = create_engine(
@@ -117,6 +147,7 @@ def test_capture_public_and_precise_location_require_explicit_consent() -> None:
 
 
 def test_fishery_profile_import_is_private_and_source_bound(monkeypatch) -> None:
+    _enable_live_anglingai(monkeypatch)
     monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
 
     with sqlite_client() as client:
@@ -143,8 +174,28 @@ def test_fishery_profile_import_is_private_and_source_bound(monkeypatch) -> None
         assert profile["gate_closure_notes"]
         assert profile["facilities"]
 
+    get_settings.cache_clear()
+
+
+def test_fishery_profile_import_requires_live_anglingai(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.delenv("ANGLINGAI_API_KEY", raising=False)
+    monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
+
+    with sqlite_client() as client:
+        response = client.post(
+            "/api/v1/fishery-profiles/from-venue-intelligence?query=Linear%20Fisheries",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+
+        assert response.status_code == 424
+        assert "Live AnglingAI venue research is required" in response.json()["detail"]
+
+    get_settings.cache_clear()
+
 
 def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
+    _enable_live_anglingai(monkeypatch)
     monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
 
     with sqlite_client() as client:
@@ -169,8 +220,11 @@ def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
         assert other_user_response.status_code == 200
         assert other_user_response.json() == []
 
+    get_settings.cache_clear()
+
 
 def test_fishery_catalogue_static_seed_cleanup_removes_source_pack_profiles(monkeypatch) -> None:
+    _enable_live_anglingai(monkeypatch)
     monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
 
     with sqlite_client() as client:
@@ -191,6 +245,8 @@ def test_fishery_catalogue_static_seed_cleanup_removes_source_pack_profiles(monk
         assert cleanup_response.status_code == 200
         assert cleanup_response.json() == {"deleted": 1}
         assert search_response.json() == []
+
+    get_settings.cache_clear()
 
 
 def test_fishery_catalogue_seed_query_creates_dynamic_advisory_profile(monkeypatch) -> None:

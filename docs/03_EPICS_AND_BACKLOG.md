@@ -184,7 +184,7 @@ Goal: Keep the build stable.
 User stories:
 - As a developer, I can run backend tests.
 - As a developer, I can run Flutter tests.
-- As a product owner, I can validate recommendation behaviour with sample data.
+- As a product owner, I can validate recommendation behaviour with controlled test fixtures.
 
 Acceptance criteria:
 - pytest tests exist.

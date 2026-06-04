@@ -1,17 +1,17 @@
 import 'api_client.dart';
-import 'mock_data.dart';
+import 'models.dart';
 
 class AppRepository {
   const AppRepository({this.api = const CarpCraftApiClient()});
 
   final CarpCraftApiClient api;
 
-  Future<List<MockVenue>> loadVenues() async {
+  Future<List<VenueSummary>> loadVenues() async {
     try {
       final items = await api.getList('/api/v1/venues');
       final venues = items
           .whereType<Map<String, dynamic>>()
-          .map(MockVenue.fromJson)
+          .map(VenueSummary.fromJson)
           .toList();
       return venues;
     } on CarpCraftApiException {
@@ -19,7 +19,7 @@ class AppRepository {
     }
   }
 
-  Future<MockVenue> createVenue({
+  Future<VenueSummary> createVenue({
     required String name,
     required String type,
     required String locationLabel,
@@ -47,32 +47,32 @@ class AppRepository {
     }
 
     final response = await api.postMap('/api/v1/venues', body);
-    return MockVenue.fromJson(response);
+    return VenueSummary.fromJson(response);
   }
 
-  Future<MockVenueIntelligence> lookupVenueIntelligence(String query) async {
+  Future<VenueIntelligenceReport> lookupVenueIntelligence(String query) async {
     try {
       final encodedQuery = Uri.encodeQueryComponent(query);
       final response = await api
           .getMap('/api/v1/venues/intelligence/lookup?query=$encodedQuery');
-      return MockVenueIntelligence.fromJson(response);
+      return VenueIntelligenceReport.fromJson(response);
     } on CarpCraftApiException {
       rethrow;
     }
   }
 
-  Future<MockVenueIntelligence> importVenueIntelligence(String query) async {
+  Future<VenueIntelligenceReport> importVenueIntelligence(String query) async {
     try {
       final encodedQuery = Uri.encodeQueryComponent(query);
       final response = await api.postMap(
           '/api/v1/venues/intelligence/import?query=$encodedQuery', {});
-      return MockVenueIntelligence.fromJson(response);
+      return VenueIntelligenceReport.fromJson(response);
     } on CarpCraftApiException {
       rethrow;
     }
   }
 
-  Future<List<MockFisheryProfile>> loadFisheryCatalogue() async {
+  Future<List<FisheryProfile>> loadFisheryCatalogue() async {
     return searchFisheryCatalogue('');
   }
 
@@ -84,70 +84,59 @@ class AppRepository {
     }
   }
 
-  Future<List<MockFisheryProfile>> seedFisheryCatalogue({String? query}) async {
+  Future<List<FisheryProfile>> seedFisheryCatalogue({String? query}) async {
     final normalized = query?.trim();
     if (normalized == null || normalized.isEmpty) {
       return [];
     }
-    try {
-      final path =
-          '/api/v1/fishery-profiles/catalogue/seed?query=${Uri.encodeQueryComponent(normalized)}';
-      final response = await api.postList(path, {});
-      final profiles = response
-          .whereType<Map<String, dynamic>>()
-          .map(MockFisheryProfile.fromJson)
-          .toList();
-      return profiles;
-    } on CarpCraftApiException {
-      return [];
-    }
+    final path =
+        '/api/v1/fishery-profiles/catalogue/seed?query=${Uri.encodeQueryComponent(normalized)}';
+    final response = await api.postList(path, {});
+    final profiles = response
+        .whereType<Map<String, dynamic>>()
+        .map(FisheryProfile.fromJson)
+        .toList();
+    return profiles;
   }
 
-  Future<List<MockFisheryProfile>> researchFisheryCatalogue(
-      String query) async {
+  Future<List<FisheryProfile>> researchFisheryCatalogue(String query) async {
     final normalized = query.trim();
     if (normalized.isEmpty) {
       return loadFisheryCatalogue();
     }
-    final existing = await searchFisheryCatalogue(normalized);
-    if (existing.isNotEmpty) {
-      return existing;
-    }
     return seedFisheryCatalogue(query: normalized);
   }
 
-  Future<List<MockFisheryProfile>> searchFisheryCatalogue(String query) async {
-    try {
-      final encodedQuery = Uri.encodeQueryComponent(query);
-      final response = await api.getList(
-          '/api/v1/fishery-profiles/catalogue/search?query=$encodedQuery');
-      final profiles = response
-          .whereType<Map<String, dynamic>>()
-          .map(MockFisheryProfile.fromJson)
-          .toList();
-      return profiles;
-    } on CarpCraftApiException {
-      return [];
-    }
+  Future<List<FisheryProfile>> searchFisheryCatalogue(String query) async {
+    final encodedQuery = Uri.encodeQueryComponent(query);
+    final response = await api.getList(
+        '/api/v1/fishery-profiles/catalogue/search?query=$encodedQuery');
+    final profiles = response
+        .whereType<Map<String, dynamic>>()
+        .map(FisheryProfile.fromJson)
+        .toList();
+    return profiles;
   }
 
-  Future<MockWeatherCondition> loadLiveWeatherConditions({
-    double latitude = 51.74778,
-    double longitude = -1.44076,
-    String locationLabel = 'Linear Fisheries Oxford',
+  Future<WeatherConditionSnapshot> loadLiveWeatherConditions({
+    double? latitude,
+    double? longitude,
+    String? locationLabel,
   }) async {
-    try {
-      final query = Uri(queryParameters: {
-        'latitude': latitude.toString(),
-        'longitude': longitude.toString(),
-        'location_label': locationLabel,
-      }).query;
-      final response =
-          await api.getMap('/api/v1/weather-snapshots/live/conditions?$query');
-      return MockWeatherCondition.fromJson(response);
-    } on CarpCraftApiException {
-      return mockWeatherCondition;
+    final parameters = <String, String>{};
+    if (latitude != null) {
+      parameters['latitude'] = latitude.toString();
     }
+    if (longitude != null) {
+      parameters['longitude'] = longitude.toString();
+    }
+    if (locationLabel != null && locationLabel.trim().isNotEmpty) {
+      parameters['location_label'] = locationLabel.trim();
+    }
+    final query = Uri(queryParameters: parameters).query;
+    final response =
+        await api.getMap('/api/v1/weather-snapshots/live/conditions?$query');
+    return WeatherConditionSnapshot.fromJson(response);
   }
 
   Future<Map<String, dynamic>> createCaptureAsset({
@@ -202,60 +191,50 @@ class AppRepository {
         }
       ],
     };
-    try {
-      return await api.postMap('/api/v1/capture-assets', body);
-    } on CarpCraftApiException {
-      return body;
-    }
+    return api.postMap('/api/v1/capture-assets', body);
   }
 
-  Future<MockIntelligenceBrief> loadExampleIntelligenceBrief() async {
-    try {
-      final response =
-          await api.getMap('/api/v1/ai-intelligence/example-live-session');
-      return MockIntelligenceBrief.fromJson(response);
-    } on CarpCraftApiException {
-      return mockIntelligenceBrief;
-    }
+  Future<IntelligenceBrief> loadExampleIntelligenceBrief() async {
+    final response =
+        await api.getMap('/api/v1/ai-intelligence/example-live-session');
+    return IntelligenceBrief.fromJson(response);
   }
 
-  Future<MockProviderStatus> loadAnglingAIStatus() async {
+  Future<ProviderStatus> loadAnglingAIStatus() async {
     try {
       final response = await api.getMap('/api/v1/anglingai/status');
-      return MockProviderStatus.fromJson(response);
+      return ProviderStatus.fromJson(response);
     } on CarpCraftApiException catch (error) {
       if (error.isUnauthorized) {
-        return authRequiredAnglingAIStatus;
+        return const ProviderStatus(
+          providerName: 'AnglingAI',
+          configured: false,
+          summary:
+              'Sign in with DIIAC Entra ID to check live AnglingAI provider status.',
+          dataGaps: [
+            'The production API rejected the request before provider status could be checked.',
+          ],
+        );
       }
-      return mockAnglingAIStatus;
+      rethrow;
     }
   }
 
-  Future<MockRecommendation> generateRecommendation() async {
-    try {
-      final response = await api.postMap('/api/v1/recommendations/generate', {
-        'venue_history_sessions': 7,
-        'water_temp_c': null,
-        'dissolved_oxygen_mg_l': null,
-        'air_temp_c': 24.0,
-        'wind_speed_mps': 4.5,
-        'wind_has_pushed_hours': 4,
-        'weed_density': 6,
-        'angling_pressure_count': 4,
-        'observations': [
-          {
-            'observation_type': 'show',
-            'count': 2,
-            'away_from_current_rods': true,
-          },
-        ],
-        'liners_without_takes': true,
-        'spawning_indicators': false,
-      });
-      return MockRecommendation.fromJson(response);
-    } on CarpCraftApiException {
-      return mockRecommendation;
-    }
+  Future<RecommendationSummary> generateRecommendation() async {
+    final response = await api.postMap('/api/v1/recommendations/generate', {
+      'venue_history_sessions': 0,
+      'water_temp_c': null,
+      'dissolved_oxygen_mg_l': null,
+      'air_temp_c': null,
+      'wind_speed_mps': null,
+      'wind_has_pushed_hours': null,
+      'weed_density': null,
+      'angling_pressure_count': null,
+      'observations': [],
+      'liners_without_takes': false,
+      'spawning_indicators': false,
+    });
+    return RecommendationSummary.fromJson(response);
   }
 }
 

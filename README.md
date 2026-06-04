@@ -16,7 +16,7 @@ This repository contains the Phase A scaffold plus the first Phase B persistence
 - Rich weather conditions screen with multi-provider weather, approximate surface-temperature caveat and grounded AI brief inputs.
 - PostgreSQL Docker Compose using a pgvector-ready image.
 - Azure Container Apps deployment scaffold for the DIIAC tenant with Key Vault, PostgreSQL and private capture storage.
-- Documentation, legal/compliance drafts, sample data and Windows helper scripts.
+- Documentation, legal/compliance drafts, focused test fixtures and Windows helper scripts.
 
 ## Requirements
 

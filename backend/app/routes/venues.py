@@ -29,6 +29,13 @@ def _private_venue_id(canonical_venue_id: str, user_id: str) -> str:
     return f"{canonical_venue_id}-{fingerprint}"
 
 
+def _has_live_anglingai_research(report: VenueIntelligenceReport) -> bool:
+    return any(
+        status.connector_name == "anglingai_venue_research" and status.status == "active"
+        for status in report.connector_statuses
+    )
+
+
 @router.get("/intelligence/lookup", response_model=VenueIntelligenceReport)
 def lookup_venue_intelligence(
     query: str = Query(..., min_length=2),
@@ -52,6 +59,14 @@ def import_venue_intelligence(
         report = service.lookup(query)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if not _has_live_anglingai_research(report):
+        raise HTTPException(
+            status_code=status.HTTP_424_FAILED_DEPENDENCY,
+            detail=(
+                "Live AnglingAI venue research is required before importing public venue intelligence. "
+                "Check ANGLINGAI_API_KEY, quota and endpoint availability."
+            ),
+        )
 
     canonical_venue = report.suggested_venue
     private_venue = canonical_venue.model_copy(

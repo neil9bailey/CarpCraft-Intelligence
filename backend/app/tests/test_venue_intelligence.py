@@ -12,7 +12,12 @@ from app.core.database import get_db
 from app.main import app
 from app.models.persistence import Base
 from app.routes.venues import get_venue_intelligence_service
-from app.services.venue_source_connectors import AnglingAIVenueResearchConnector, GooglePlacesConnector
+from app.schemas.domain import Venue, VenueConnectorStatus, VenueSourceEvidence
+from app.services.venue_source_connectors import (
+    AnglingAIVenueResearchConnector,
+    GooglePlacesConnector,
+    VenueConnectorResult,
+)
 from app.services.venue_intelligence_service import VenueIntelligenceService
 from app.services.weather_service import WeatherLookupRequest, WeatherProvider, WeatherService
 
@@ -35,10 +40,45 @@ class _StaticWeatherProvider(WeatherProvider):
         }
 
 
+class _LiveAnglingAIConnector:
+    connector_name = "anglingai_venue_research"
+
+    def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
+        evidence = [
+            VenueSourceEvidence(
+                source_name="AnglingAI",
+                source_type="external_ai_venue_research",
+                url="https://anglingai.co.uk/docs",
+                title=f"AnglingAI Pro venue research for {venue.name}",
+                summary=f"Live AnglingAI test research returned source-bound advisory context for {venue.name}.",
+                confidence=82,
+                attribution_required=True,
+                usage_notes="Test connector; production must call AnglingAI.",
+            )
+        ]
+        return VenueConnectorResult(
+            status=VenueConnectorStatus(
+                connector_name=self.connector_name,
+                display_name="AnglingAI Pro venue research",
+                status="active",
+                summary="AnglingAI venue research returned live test evidence.",
+                evidence_count=len(evidence),
+            ),
+            evidence=evidence,
+        )
+
+
 def _test_service() -> VenueIntelligenceService:
     return VenueIntelligenceService(
         weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
         source_connectors=[],
+    )
+
+
+def _live_test_service() -> VenueIntelligenceService:
+    return VenueIntelligenceService(
+        weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
+        source_connectors=[_LiveAnglingAIConnector()],
     )
 
 
@@ -60,7 +100,7 @@ def client_with_venue_intelligence() -> Generator[TestClient, None, None]:
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_venue_intelligence_service] = _test_service
+    app.dependency_overrides[get_venue_intelligence_service] = _live_test_service
     try:
         yield TestClient(app)
     finally:

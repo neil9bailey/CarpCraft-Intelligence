@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_repository.dart';
-import '../../core/mock_data.dart';
+import '../../core/models.dart';
 import '../../shared/carp_scaffold.dart';
 
 class WeatherScreen extends StatefulWidget {
@@ -13,9 +13,9 @@ class WeatherScreen extends StatefulWidget {
 
 class _WeatherScreenState extends State<WeatherScreen> {
   final AppRepository _repository = const AppRepository();
-  late Future<MockWeatherCondition> _conditions;
-  late Future<MockIntelligenceBrief> _brief;
-  late Future<MockProviderStatus> _anglingAIStatus;
+  late Future<WeatherConditionSnapshot> _conditions;
+  late Future<IntelligenceBrief> _brief;
+  late Future<ProviderStatus> _anglingAIStatus;
 
   @override
   void initState() {
@@ -41,10 +41,31 @@ class _WeatherScreenState extends State<WeatherScreen> {
         ),
       ],
       children: [
-        FutureBuilder<MockWeatherCondition>(
+        FutureBuilder<WeatherConditionSnapshot>(
           future: _conditions,
           builder: (context, snapshot) {
-            final condition = snapshot.data ?? mockWeatherCondition;
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SectionCard(
+                title: 'Live conditions',
+                icon: Icons.cloud_outlined,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(12),
+                    child: LinearProgressIndicator(),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return _LiveErrorCard(
+                title: 'Live conditions',
+                icon: Icons.cloud_off_outlined,
+                message:
+                    'Live weather did not return from the CarpCraft API. Refresh after sign-in and provider configuration are confirmed.',
+                error: snapshot.error,
+              );
+            }
+            final condition = snapshot.data!;
             return Column(
               children: [
                 SectionCard(
@@ -101,7 +122,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     const SizedBox(height: 12),
                     _InfoLine(
                       icon: Icons.hub_outlined,
-                      text: '${condition.providerCount} weather sources attached',
+                      text:
+                          '${condition.providerCount} weather sources attached',
                     ),
                     for (final note in condition.approximationNotes)
                       _InfoLine(icon: Icons.science_outlined, text: note),
@@ -114,14 +136,27 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   title: 'Live session inputs',
                   icon: Icons.assignment_outlined,
                   children: [
-                    _InputPill(icon: Icons.water_outlined, label: 'Venue and lake'),
-                    _InputPill(icon: Icons.place_outlined, label: 'Swim and spot'),
-                    _InputPill(icon: Icons.cloud_outlined, label: 'Weather snapshot'),
-                    _InputPill(icon: Icons.visibility_outlined, label: 'Shows and liners'),
-                    _InputPill(icon: Icons.add_a_photo_outlined, label: 'Annotated captures'),
-                    _InputPill(icon: Icons.thermostat_outlined, label: 'Water readings'),
-                    _InputPill(icon: Icons.construction_outlined, label: 'Rig and bait'),
-                    _InputPill(icon: Icons.health_and_safety_outlined, label: 'Fish welfare'),
+                    _InputPill(
+                        icon: Icons.water_outlined, label: 'Venue and lake'),
+                    _InputPill(
+                        icon: Icons.place_outlined, label: 'Swim and spot'),
+                    _InputPill(
+                        icon: Icons.cloud_outlined, label: 'Weather snapshot'),
+                    _InputPill(
+                        icon: Icons.visibility_outlined,
+                        label: 'Shows and liners'),
+                    _InputPill(
+                        icon: Icons.add_a_photo_outlined,
+                        label: 'Annotated captures'),
+                    _InputPill(
+                        icon: Icons.thermostat_outlined,
+                        label: 'Water readings'),
+                    _InputPill(
+                        icon: Icons.construction_outlined,
+                        label: 'Rig and bait'),
+                    _InputPill(
+                        icon: Icons.health_and_safety_outlined,
+                        label: 'Fish welfare'),
                   ],
                 ),
               ],
@@ -129,10 +164,31 @@ class _WeatherScreenState extends State<WeatherScreen> {
           },
         ),
         const SizedBox(height: 12),
-        FutureBuilder<MockIntelligenceBrief>(
+        FutureBuilder<IntelligenceBrief>(
           future: _brief,
           builder: (context, snapshot) {
-            final brief = snapshot.data ?? mockIntelligenceBrief;
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SectionCard(
+                title: 'AI intelligence',
+                icon: Icons.psychology_outlined,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(12),
+                    child: LinearProgressIndicator(),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return _LiveErrorCard(
+                title: 'AI intelligence',
+                icon: Icons.psychology_outlined,
+                message:
+                    'No live AI brief is available. Create or load a session with weather, observations and capture evidence before relying on explanations.',
+                error: snapshot.error,
+              );
+            }
+            final brief = snapshot.data!;
             return SectionCard(
               title: 'AI intelligence',
               icon: Icons.psychology_outlined,
@@ -159,17 +215,37 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   _InfoLine(
                       icon: Icons.health_and_safety_outlined, text: warning),
                 _InfoLine(
-                    icon: Icons.rule_outlined,
-                    text: brief.noGuaranteeNotice),
+                    icon: Icons.rule_outlined, text: brief.noGuaranteeNotice),
               ],
             );
           },
         ),
         const SizedBox(height: 12),
-        FutureBuilder<MockProviderStatus>(
+        FutureBuilder<ProviderStatus>(
           future: _anglingAIStatus,
           builder: (context, snapshot) {
-            final status = snapshot.data ?? mockAnglingAIStatus;
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SectionCard(
+                title: 'External agents',
+                icon: Icons.hub_outlined,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(12),
+                    child: LinearProgressIndicator(),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return _LiveErrorCard(
+                title: 'External agents',
+                icon: Icons.hub_outlined,
+                message:
+                    'Provider status did not return from the production API. Check Entra sign-in and backend configuration.',
+                error: snapshot.error,
+              );
+            }
+            final status = snapshot.data!;
             return SectionCard(
               title: 'External agents',
               icon: Icons.hub_outlined,
@@ -205,6 +281,33 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   String _label(String value) {
     return value.replaceAll('_', ' ');
+  }
+}
+
+class _LiveErrorCard extends StatelessWidget {
+  const _LiveErrorCard({
+    required this.title,
+    required this.icon,
+    required this.message,
+    this.error,
+  });
+
+  final String title;
+  final IconData icon;
+  final String message;
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: title,
+      icon: icon,
+      children: [
+        _InfoLine(icon: Icons.info_outline, text: message),
+        if (error != null)
+          _InfoLine(icon: Icons.error_outline, text: error.toString()),
+      ],
+    );
   }
 }
 

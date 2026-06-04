@@ -59,6 +59,13 @@ def _source_urls(report: VenueIntelligenceReport, source_type: str | None = None
     return list(dict.fromkeys(urls))
 
 
+def _has_live_anglingai_research(report: VenueIntelligenceReport) -> bool:
+    return any(
+        status.connector_name == "anglingai_venue_research" and status.status == "active"
+        for status in report.connector_statuses
+    )
+
+
 def _section(
     category: str,
     title: str,
@@ -306,6 +313,14 @@ def _create_profile(
         report = VenueIntelligenceService().lookup(query)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if not _has_live_anglingai_research(report):
+        raise HTTPException(
+            status_code=status.HTTP_424_FAILED_DEPENDENCY,
+            detail=(
+                "Live AnglingAI venue research is required before creating a fishery profile. "
+                "Check ANGLINGAI_API_KEY, quota and endpoint availability."
+            ),
+        )
     profile = _build_profile_from_report(report, principal)
     return build_repository(db, "fishery-profiles", FisheryProfile).upsert(profile)
 
