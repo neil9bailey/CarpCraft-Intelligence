@@ -9,6 +9,7 @@ The product is not a magical catch predictor and must never guarantee catches. I
 This repository contains the Phase A scaffold plus the first Phase B persistence slice:
 
 - FastAPI backend skeleton with route scaffolds and rule-engine tests.
+- Evidence-ranked watercraft recommendation engine that weighs water temperature and its trend, season, low-light feeding windows, barometric pressure and trend, wind character, oxygen risk, angling pressure, observations and recent venue form into a prioritised, reversible session plan with confidence and explicit data gaps.
 - SQLAlchemy/Alembic persistence with normalized core analytics tables.
 - Local auth plus production Microsoft Entra ID validation for the DIIAC tenant.
 - Flutter Android-first mobile skeleton with API wiring, DIIAC sign-in, hybrid maps and explicit geolocation action.

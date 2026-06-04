@@ -55,6 +55,23 @@ class AIIntelligenceService:
                 confidence += 8
             if weather.precipitation_intensity in {"moderate", "heavy"}:
                 recommendations.append("Keep notes on water clarity and runoff; heavy rain can move fish but also change presentation confidence.")
+            if weather.pressure_trend_hpa_3h is not None:
+                trend = weather.pressure_trend_hpa_3h
+                if trend <= -1.5:
+                    recommendations.append("Pressure is dropping fast and a front is likely approaching; carp often feed before unsettled weather, so fish with intent now.")
+                    confidence += 6
+                elif trend >= 1.5:
+                    recommendations.append("Pressure is rising into settled weather; expect fish to drop back or hold higher in the water and adjust presentation accordingly.")
+                    confidence += 4
+                evidence.append(
+                    AIEvidenceItem(
+                        source_type="weather",
+                        summary=f"Barometric pressure trend {trend:+.1f} hPa over 3h from {weather.source}.",
+                        confidence=65,
+                    )
+                )
+            elif weather.pressure_hpa is None:
+                data_gaps.append("Barometric pressure and trend are missing; pressure changes are a strong carp feeding signal.")
             data_gaps.extend(weather.data_gaps[:4])
 
         if context.observations:
