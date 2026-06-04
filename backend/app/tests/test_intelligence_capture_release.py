@@ -1,12 +1,14 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
+from app.core.config import get_settings
 from app.main import app
 from app.models.persistence import Base
 from app.services.condition_service import WeatherConditionService
@@ -148,6 +150,7 @@ def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
     with sqlite_client() as client:
         seed_response = client.post(
             "/api/v1/fishery-profiles/catalogue/seed",
+            params={"query": "Norton Disney"},
             headers={"X-CarpCraft-User-Id": "angler-a"},
         )
         search_response = client.get(
@@ -160,15 +163,58 @@ def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
         )
 
         assert seed_response.status_code == 201
-        assert len(seed_response.json()) >= 2
+        assert len(seed_response.json()) == 1
         assert search_response.status_code == 200
         assert [profile["display_name"] for profile in search_response.json()] == ["Embryo Norton Disney"]
         assert other_user_response.status_code == 200
         assert other_user_response.json() == []
 
 
-def test_fishery_catalogue_seed_query_creates_dynamic_advisory_profile(monkeypatch) -> None:
+def test_fishery_catalogue_static_seed_cleanup_removes_source_pack_profiles(monkeypatch) -> None:
     monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
+
+    with sqlite_client() as client:
+        client.post(
+            "/api/v1/fishery-profiles/catalogue/seed",
+            params={"query": "Linear Fisheries"},
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+        cleanup_response = client.delete(
+            "/api/v1/fishery-profiles/catalogue/static-seeds",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+        search_response = client.get(
+            "/api/v1/fishery-profiles/catalogue/search",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+
+        assert cleanup_response.status_code == 200
+        assert cleanup_response.json() == {"deleted": 1}
+        assert search_response.json() == []
+
+
+def test_fishery_catalogue_seed_query_creates_dynamic_advisory_profile(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")
+    monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
+
+    def fake_post(url, json, headers, timeout):  # noqa: ANN001
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "venueName": "Bluebell Lakes",
+                    "recommendedMethods": ["solid bags"],
+                    "bestSpots": ["gravel bars"],
+                    "confidence": {"score": 82},
+                },
+                "sourceCount": 0,
+            },
+            headers={"content-type": "application/json"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
 
     with sqlite_client() as client:
         seed_response = client.post(
@@ -185,6 +231,8 @@ def test_fishery_catalogue_seed_query_creates_dynamic_advisory_profile(monkeypat
         assert profile["privacy_level"] == "private"
         assert any(section["category"] == "intelligence" for section in profile["sections"])
         assert any("Dynamic profile is not source-pack verified" in gap for gap in profile["data_gaps"])
+
+    get_settings.cache_clear()
 
 
 def test_weather_conditions_include_surface_temp_and_data_gaps() -> None:

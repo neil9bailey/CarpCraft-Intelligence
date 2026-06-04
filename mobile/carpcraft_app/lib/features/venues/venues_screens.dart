@@ -57,20 +57,24 @@ class _VenueListScreenState extends State<VenueListScreen> {
     });
   }
 
-  Future<void> _seedCatalogue() async {
+  Future<void> _researchCatalogue() async {
+    final query = _catalogueQueryController.text.trim();
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a fishery name to research.')));
+      return;
+    }
     setState(() {
       _catalogueBusy = true;
     });
     try {
-      final query = _catalogueQueryController.text.trim();
-      final profiles = await _repository.seedFisheryCatalogue(
-          query: query.isEmpty ? null : query);
+      final profiles = await _repository.researchFisheryCatalogue(query);
       if (mounted) {
         setState(() {
           _catalogue = Future.value(profiles);
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Seeded ${profiles.length} fishery profiles.')));
+            content: Text('Found ${profiles.length} fishery profile(s).')));
       }
     } finally {
       if (mounted) {
@@ -84,7 +88,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
   void _searchCatalogue() {
     setState(() {
       _catalogue =
-          _repository.searchFisheryCatalogue(_catalogueQueryController.text);
+          _repository.researchFisheryCatalogue(_catalogueQueryController.text);
     });
   }
 
@@ -125,7 +129,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
             TextField(
               controller: _catalogueQueryController,
               decoration: const InputDecoration(
-                  labelText: 'Search catalogued fisheries'),
+                  labelText: 'Search fisheries with AnglingAI'),
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _searchCatalogue(),
             ),
@@ -135,14 +139,14 @@ class _VenueListScreenState extends State<VenueListScreen> {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: _catalogueBusy ? null : _seedCatalogue,
+                  onPressed: _catalogueBusy ? null : _researchCatalogue,
                   icon: _catalogueBusy
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.auto_awesome_outlined),
-                  label: const Text('Seed catalogue'),
+                  label: const Text('Research fishery'),
                 ),
                 OutlinedButton.icon(
                   onPressed: _searchCatalogue,
@@ -155,7 +159,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
             FutureBuilder<List<MockFisheryProfile>>(
               future: _catalogue,
               builder: (context, snapshot) {
-                final profiles = snapshot.data ?? mockFisheryProfiles;
+                final profiles = snapshot.data ?? <MockFisheryProfile>[];
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.all(12),
@@ -165,7 +169,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
                 if (profiles.isEmpty) {
                   return const _CompactInfoLine(
                     icon: Icons.info_outline,
-                    text: 'No private fishery profiles match this search.',
+                    text: 'No live fishery profiles loaded yet.',
                   );
                 }
                 return Column(
@@ -185,12 +189,18 @@ class _VenueListScreenState extends State<VenueListScreen> {
         FutureBuilder<List<MockVenue>>(
           future: _venues,
           builder: (context, snapshot) {
-            final venues = snapshot.data ?? mockVenues;
+            final venues = snapshot.data ?? <MockVenue>[];
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                   child: Padding(
                       padding: EdgeInsets.all(24),
                       child: CircularProgressIndicator()));
+            }
+            if (venues.isEmpty) {
+              return const _CompactInfoLine(
+                icon: Icons.water_outlined,
+                text: 'No private venues saved yet.',
+              );
             }
             return Column(
               children: [

@@ -85,14 +85,41 @@ def test_venue_intelligence_lookup_returns_grounded_embryo_report() -> None:
     assert "Never disturb spawning fish." in report.ethical_warnings
 
 
-def test_venue_intelligence_dynamic_query_returns_advisory_report() -> None:
-    report = _test_service().lookup("unknown syndicate water")
+def test_venue_intelligence_dynamic_query_returns_anglingai_advisory_report(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")
 
-    assert report.matched_key == "dynamic-unknown-syndicate-water"
-    assert report.suggested_venue.name == "unknown syndicate water"
-    assert report.confidence_score == 45
+    def fake_post(url, json, headers, timeout):  # noqa: ANN001
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "venueName": "Bluebell Lakes",
+                    "recommendedMethods": ["solid bags"],
+                    "bestSpots": ["gravel bars"],
+                    "confidence": {"score": 82},
+                },
+                "sourceCount": 0,
+            },
+            headers={"content-type": "application/json"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    report = VenueIntelligenceService(
+        weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
+        source_connectors=[AnglingAIVenueResearchConnector()],
+    ).lookup("Bluebell Lakes")
+
+    assert report.matched_key == "dynamic-bluebell-lakes"
+    assert report.suggested_venue.name == "Bluebell Lakes"
+    assert report.confidence_score == 60
+    assert any(source.source_name == "AnglingAI" for source in report.source_evidence)
     assert "Dynamic profile is not source-pack verified" in report.data_gaps[0]
     assert "Never disturb spawning fish." in report.ethical_warnings
+
+    get_settings.cache_clear()
 
 
 def test_venue_intelligence_import_creates_private_venue_and_swims(client_with_venue_intelligence: TestClient) -> None:

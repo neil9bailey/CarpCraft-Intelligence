@@ -13,9 +13,9 @@ class AppRepository {
           .whereType<Map<String, dynamic>>()
           .map(MockVenue.fromJson)
           .toList();
-      return venues.isEmpty ? mockVenues : venues;
+      return venues;
     } on CarpCraftApiException {
-      return mockVenues;
+      return [];
     }
   }
 
@@ -57,7 +57,7 @@ class AppRepository {
           .getMap('/api/v1/venues/intelligence/lookup?query=$encodedQuery');
       return MockVenueIntelligence.fromJson(response);
     } on CarpCraftApiException {
-      return fallbackVenueIntelligence(query);
+      rethrow;
     }
   }
 
@@ -68,45 +68,52 @@ class AppRepository {
           '/api/v1/venues/intelligence/import?query=$encodedQuery', {});
       return MockVenueIntelligence.fromJson(response);
     } on CarpCraftApiException {
-      final intelligence = fallbackVenueIntelligence(query);
-      final venue = intelligence.suggestedVenue;
-      await createVenue(
-        name: venue.name,
-        type: venue.type,
-        locationLabel: venue.locationLabel,
-        rulesNotes: venue.rulesNotes,
-        stockNotes: venue.stockNotes,
-        approximateLatitude: venue.approximateLatitude,
-        approximateLongitude: venue.approximateLongitude,
-        acreage: venue.acreage,
-      );
-      return intelligence;
+      rethrow;
     }
   }
 
   Future<List<MockFisheryProfile>> loadFisheryCatalogue() async {
-    final profiles = await searchFisheryCatalogue('');
-    if (profiles.isNotEmpty) {
-      return profiles;
+    return searchFisheryCatalogue('');
+  }
+
+  Future<void> clearStaticFisheryCatalogueSeeds() async {
+    try {
+      await api.deleteMap('/api/v1/fishery-profiles/catalogue/static-seeds');
+    } on CarpCraftApiException {
+      return;
     }
-    return seedFisheryCatalogue();
   }
 
   Future<List<MockFisheryProfile>> seedFisheryCatalogue({String? query}) async {
+    final normalized = query?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return [];
+    }
     try {
-      final normalized = query?.trim();
-      final path = normalized == null || normalized.isEmpty
-          ? '/api/v1/fishery-profiles/catalogue/seed'
-          : '/api/v1/fishery-profiles/catalogue/seed?query=${Uri.encodeQueryComponent(normalized)}';
+      final path =
+          '/api/v1/fishery-profiles/catalogue/seed?query=${Uri.encodeQueryComponent(normalized)}';
       final response = await api.postList(path, {});
       final profiles = response
           .whereType<Map<String, dynamic>>()
           .map(MockFisheryProfile.fromJson)
           .toList();
-      return profiles.isEmpty ? mockFisheryProfiles : profiles;
+      return profiles;
     } on CarpCraftApiException {
-      return mockFisheryProfiles;
+      return [];
     }
+  }
+
+  Future<List<MockFisheryProfile>> researchFisheryCatalogue(
+      String query) async {
+    final normalized = query.trim();
+    if (normalized.isEmpty) {
+      return loadFisheryCatalogue();
+    }
+    final existing = await searchFisheryCatalogue(normalized);
+    if (existing.isNotEmpty) {
+      return existing;
+    }
+    return seedFisheryCatalogue(query: normalized);
   }
 
   Future<List<MockFisheryProfile>> searchFisheryCatalogue(String query) async {
@@ -120,22 +127,7 @@ class AppRepository {
           .toList();
       return profiles;
     } on CarpCraftApiException {
-      final normalized = query.trim().toLowerCase();
-      if (normalized.isEmpty) {
-        return mockFisheryProfiles;
-      }
-      return mockFisheryProfiles.where((profile) {
-        final haystack = [
-          profile.displayName,
-          profile.slug,
-          profile.locationLabel ?? '',
-          profile.description ?? '',
-          ...profile.lakes.map((lake) => lake.name),
-          ...profile.sections.map((section) => section.title),
-          ...profile.sections.expand((section) => section.items),
-        ].join(' ').toLowerCase();
-        return haystack.contains(normalized);
-      }).toList();
+      return [];
     }
   }
 
