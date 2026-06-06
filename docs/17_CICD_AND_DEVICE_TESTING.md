@@ -128,6 +128,9 @@ The app is **live-first**: there is no demo/offline data, so if it cannot reach 
 working backend, weather, venues and recommendations will be empty or show errors.
 
 ### "Weather / venues / recommendations not working"
+0. The **Dashboard shows a red "Backend not reachable" banner** when it cannot
+   reach the API, with **Open Settings** and **Retry** buttons. If you see it,
+   the backend URL is wrong or the backend is down/unreachable.
 1. Open **Settings -> Backend connection**, enter your backend URL (the Azure
    Container App URL, or `http://<your-LAN-ip>:8000` for a dev server), tap
    **Save**, then **Test connection**. A green "Connected" confirms reachability.

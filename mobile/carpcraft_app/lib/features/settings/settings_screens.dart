@@ -1,12 +1,10 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../core/app_settings_state.dart';
 import '../../core/auth_service.dart';
 import '../../core/auth_state.dart';
+import '../../core/connectivity.dart';
 import '../../core/runtime_config.dart';
 import '../../shared/carp_scaffold.dart';
 
@@ -45,61 +43,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     final value = _apiBaseUrlController.text.trim();
     await RuntimeConfig.instance.setApiBaseUrl(value.isEmpty ? null : value);
+    if (mounted) {
+      _apiBaseUrlController.text = RuntimeConfig.instance.effectiveBaseUrl;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Backend set to ${RuntimeConfig.instance.effectiveBaseUrl}')),
+      );
+    }
+    // Re-check so the dashboard banner reflects the new target immediately.
+    final ok = await BackendConnectivity.instance.check();
     if (!mounted) {
       return;
     }
-    _apiBaseUrlController.text = RuntimeConfig.instance.effectiveBaseUrl;
     setState(() {
       _savingApiBaseUrl = false;
+      _connectionOk = ok;
+      _connectionResult = BackendConnectivity.instance.message;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(
-              'Backend set to ${RuntimeConfig.instance.effectiveBaseUrl}')),
-    );
   }
 
   Future<void> _testConnection() async {
-    final url = _apiBaseUrlController.text.trim().isEmpty
-        ? RuntimeConfig.instance.effectiveBaseUrl
-        : _apiBaseUrlController.text.trim();
     setState(() {
       _testingConnection = true;
       _connectionResult = null;
     });
-    var ok = false;
-    String message;
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 8);
-    try {
-      final base = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-      final request = await client
-          .getUrl(Uri.parse('$base/health'))
-          .timeout(const Duration(seconds: 8));
-      final response = await request.close().timeout(const Duration(seconds: 8));
-      await response.drain<void>();
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        ok = true;
-        message = 'Connected to $base (HTTP ${response.statusCode}).';
-      } else {
-        message = 'Reachable but returned HTTP ${response.statusCode} from $base.';
-      }
-    } on TimeoutException {
-      message = 'Timed out reaching $url. Check the URL and that the backend is running.';
-    } on SocketException catch (error) {
-      message = 'Could not connect to $url: ${error.message}.';
-    } catch (error) {
-      message = 'Connection test failed: $error';
-    } finally {
-      client.close(force: true);
-    }
+    final ok = await BackendConnectivity.instance
+        .check(overrideUrl: _apiBaseUrlController.text);
     if (!mounted) {
       return;
     }
     setState(() {
       _testingConnection = false;
       _connectionOk = ok;
-      _connectionResult = message;
+      _connectionResult = BackendConnectivity.instance.message;
     });
   }
 
