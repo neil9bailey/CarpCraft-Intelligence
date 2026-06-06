@@ -121,7 +121,8 @@ class _SplashScreenState extends State<SplashScreen> {
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: Colors.white24),
                   ),
-                  child: const Icon(Icons.insights, color: Colors.white, size: 42),
+                  child:
+                      const Icon(Icons.insights, color: Colors.white, size: 42),
                 ),
                 const SizedBox(height: 22),
                 const Text(

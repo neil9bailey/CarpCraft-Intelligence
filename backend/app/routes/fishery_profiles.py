@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 
-from fastapi import Depends, Query, status
+from fastapi import Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import Principal, get_current_principal
@@ -57,6 +57,13 @@ def _source_urls(report: VenueIntelligenceReport, source_type: str | None = None
         if source_type is None or source_type in source.source_type:
             urls.append(source.url)
     return list(dict.fromkeys(urls))
+
+
+def _has_live_anglingai_research(report: VenueIntelligenceReport) -> bool:
+    return any(
+        status.connector_name == "anglingai_venue_research" and status.status == "active"
+        for status in report.connector_statuses
+    )
 
 
 def _section(
@@ -302,7 +309,18 @@ def _create_profile(
     db: Session,
     principal: Principal,
 ) -> FisheryProfile:
-    report = VenueIntelligenceService().lookup(query)
+    try:
+        report = VenueIntelligenceService().lookup(query)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if not _has_live_anglingai_research(report):
+        raise HTTPException(
+            status_code=status.HTTP_424_FAILED_DEPENDENCY,
+            detail=(
+                "Live AnglingAI venue research is required before creating a fishery profile. "
+                "Check ANGLINGAI_API_KEY, quota and endpoint availability."
+            ),
+        )
     profile = _build_profile_from_report(report, principal)
     return build_repository(db, "fishery-profiles", FisheryProfile).upsert(profile)
 
@@ -324,10 +342,21 @@ def seed_catalogue(
 ) -> list[FisheryProfile]:
     if query:
         return [_create_profile(query, db, principal)]
-    profiles: list[FisheryProfile] = []
-    for pack in SOURCE_PACKS.values():
-        profiles.append(_create_profile(pack.aliases[0], db, principal))
-    return profiles
+    return []
+
+
+@router.delete("/catalogue/static-seeds", status_code=status.HTTP_200_OK)
+def delete_static_seed_profiles(
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_current_principal),
+) -> dict[str, int]:
+    repository = build_repository(db, "fishery-profiles", FisheryProfile)
+    deleted = 0
+    for item in repository.list():
+        if item.owner_user_id == principal.user_id and item.slug in SOURCE_PACKS:
+            if repository.delete(item.id):
+                deleted += 1
+    return {"deleted": deleted}
 
 
 @router.get("/catalogue/search", response_model=list[FisheryProfile])
@@ -340,7 +369,8 @@ def search_catalogue(
     items = build_repository(db, "fishery-profiles", FisheryProfile).list()
     owned = [item for item in items if item.owner_user_id == principal.user_id]
     if not normalized:
-        return sorted(owned, key=lambda item: item.display_name.lower())
+        live_owned = [item for item in owned if item.slug not in SOURCE_PACKS]
+        return sorted(live_owned, key=lambda item: item.display_name.lower())
 
     def matches(profile: FisheryProfile) -> bool:
         haystack = " ".join(

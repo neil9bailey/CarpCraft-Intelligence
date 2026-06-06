@@ -13,12 +13,16 @@ class NavDestination {
 const mainDestinations = [
   NavDestination('Dashboard', AppRoutes.dashboard, Icons.dashboard_outlined),
   NavDestination('Venues', AppRoutes.venues, Icons.water_outlined),
-  NavDestination('Start session', AppRoutes.startSession, Icons.play_arrow_outlined),
-  NavDestination('Live session', AppRoutes.liveSession, Icons.timeline_outlined),
-  NavDestination('Recommendation', AppRoutes.recommendation, Icons.tips_and_updates_outlined),
+  NavDestination(
+      'Start session', AppRoutes.startSession, Icons.play_arrow_outlined),
+  NavDestination(
+      'Live session', AppRoutes.liveSession, Icons.timeline_outlined),
+  NavDestination('Recommendation', AppRoutes.recommendation,
+      Icons.tips_and_updates_outlined),
   NavDestination('Capture', AppRoutes.capture, Icons.add_a_photo_outlined),
   NavDestination('Weather', AppRoutes.weather, Icons.cloud_outlined),
-  NavDestination('Review', AppRoutes.review, Icons.assignment_turned_in_outlined),
+  NavDestination(
+      'Review', AppRoutes.review, Icons.assignment_turned_in_outlined),
   NavDestination('Settings', AppRoutes.settings, Icons.settings_outlined),
   NavDestination('Privacy', AppRoutes.privacy, Icons.lock_outline),
 ];
@@ -111,7 +115,8 @@ class SectionCard extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 Expanded(
-                  child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(title,
+                      style: Theme.of(context).textTheme.titleMedium),
                 ),
               ],
             ),

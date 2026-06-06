@@ -12,7 +12,12 @@ from app.core.database import get_db
 from app.main import app
 from app.models.persistence import Base
 from app.routes.venues import get_venue_intelligence_service
-from app.services.venue_source_connectors import AnglingAIVenueResearchConnector, GooglePlacesConnector
+from app.schemas.domain import Venue, VenueConnectorStatus, VenueSourceEvidence
+from app.services.venue_source_connectors import (
+    AnglingAIVenueResearchConnector,
+    GooglePlacesConnector,
+    VenueConnectorResult,
+)
 from app.services.venue_intelligence_service import VenueIntelligenceService
 from app.services.weather_service import WeatherLookupRequest, WeatherProvider, WeatherService
 
@@ -35,10 +40,45 @@ class _StaticWeatherProvider(WeatherProvider):
         }
 
 
+class _LiveAnglingAIConnector:
+    connector_name = "anglingai_venue_research"
+
+    def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
+        evidence = [
+            VenueSourceEvidence(
+                source_name="AnglingAI",
+                source_type="external_ai_venue_research",
+                url="https://anglingai.co.uk/docs",
+                title=f"AnglingAI Pro venue research for {venue.name}",
+                summary=f"Live AnglingAI test research returned source-bound advisory context for {venue.name}.",
+                confidence=82,
+                attribution_required=True,
+                usage_notes="Test connector; production must call AnglingAI.",
+            )
+        ]
+        return VenueConnectorResult(
+            status=VenueConnectorStatus(
+                connector_name=self.connector_name,
+                display_name="AnglingAI Pro venue research",
+                status="active",
+                summary="AnglingAI venue research returned live test evidence.",
+                evidence_count=len(evidence),
+            ),
+            evidence=evidence,
+        )
+
+
 def _test_service() -> VenueIntelligenceService:
     return VenueIntelligenceService(
         weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
         source_connectors=[],
+    )
+
+
+def _live_test_service() -> VenueIntelligenceService:
+    return VenueIntelligenceService(
+        weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
+        source_connectors=[_LiveAnglingAIConnector()],
     )
 
 
@@ -60,7 +100,7 @@ def client_with_venue_intelligence() -> Generator[TestClient, None, None]:
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_venue_intelligence_service] = _test_service
+    app.dependency_overrides[get_venue_intelligence_service] = _live_test_service
     try:
         yield TestClient(app)
     finally:
@@ -85,14 +125,41 @@ def test_venue_intelligence_lookup_returns_grounded_embryo_report() -> None:
     assert "Never disturb spawning fish." in report.ethical_warnings
 
 
-def test_venue_intelligence_dynamic_query_returns_advisory_report() -> None:
-    report = _test_service().lookup("unknown syndicate water")
+def test_venue_intelligence_dynamic_query_returns_anglingai_advisory_report(monkeypatch) -> None:
+    get_settings.cache_clear()
+    monkeypatch.setenv("ANGLINGAI_API_KEY", "test-anglingai-key")
 
-    assert report.matched_key == "dynamic-unknown-syndicate-water"
-    assert report.suggested_venue.name == "unknown syndicate water"
-    assert report.confidence_score == 45
+    def fake_post(url, json, headers, timeout):  # noqa: ANN001
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "venueName": "Bluebell Lakes",
+                    "recommendedMethods": ["solid bags"],
+                    "bestSpots": ["gravel bars"],
+                    "confidence": {"score": 82},
+                },
+                "sourceCount": 0,
+            },
+            headers={"content-type": "application/json"},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    report = VenueIntelligenceService(
+        weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
+        source_connectors=[AnglingAIVenueResearchConnector()],
+    ).lookup("Bluebell Lakes")
+
+    assert report.matched_key == "dynamic-bluebell-lakes"
+    assert report.suggested_venue.name == "Bluebell Lakes"
+    assert report.confidence_score == 60
+    assert any(source.source_name == "AnglingAI" for source in report.source_evidence)
     assert "Dynamic profile is not source-pack verified" in report.data_gaps[0]
     assert "Never disturb spawning fish." in report.ethical_warnings
+
+    get_settings.cache_clear()
 
 
 def test_venue_intelligence_import_creates_private_venue_and_swims(client_with_venue_intelligence: TestClient) -> None:

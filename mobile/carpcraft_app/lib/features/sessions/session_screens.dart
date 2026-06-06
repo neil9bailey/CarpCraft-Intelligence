@@ -41,14 +41,15 @@ class LiveSessionDashboardScreen extends StatelessWidget {
     return const CarpScaffold(
       title: 'Live session',
       children: [
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
+        SectionCard(
+          title: 'Live evidence',
+          icon: Icons.sensors_outlined,
           children: [
-            SizedBox(width: 166, child: MetricTile(label: 'Active rods', value: '3', icon: Icons.settings_input_antenna)),
-            SizedBox(width: 166, child: MetricTile(label: 'Rod-hours', value: '6.2', icon: Icons.schedule)),
-            SizedBox(width: 166, child: MetricTile(label: 'Observations', value: '5', icon: Icons.visibility_outlined)),
-            SizedBox(width: 166, child: MetricTile(label: 'Blanks', value: '1', icon: Icons.hourglass_empty)),
+            _SessionInfoLine(
+              icon: Icons.info_outline,
+              text:
+                  'No live session evidence has been saved yet. Log rods, observations, water, catches or blank intervals to build the session record.',
+            ),
           ],
         ),
         SizedBox(height: 16),
@@ -56,12 +57,18 @@ class LiveSessionDashboardScreen extends StatelessWidget {
           spacing: 10,
           runSpacing: 10,
           children: [
-            _ActionButton('Rods', Icons.settings_input_component_outlined, AppRoutes.rodSetup),
-            _ActionButton('Observation', Icons.add_alert_outlined, AppRoutes.addObservation),
-            _ActionButton('Water', Icons.thermostat_outlined, AppRoutes.addWaterReading),
-            _ActionButton('Catch', Icons.add_photo_alternate_outlined, AppRoutes.addCatch),
-            _ActionButton('Blank', Icons.hourglass_bottom_outlined, AppRoutes.addBlank),
-            _ActionButton('Advice', Icons.tips_and_updates_outlined, AppRoutes.recommendation),
+            _ActionButton('Rods', Icons.settings_input_component_outlined,
+                AppRoutes.rodSetup),
+            _ActionButton('Observation', Icons.add_alert_outlined,
+                AppRoutes.addObservation),
+            _ActionButton(
+                'Water', Icons.thermostat_outlined, AppRoutes.addWaterReading),
+            _ActionButton('Catch', Icons.add_photo_alternate_outlined,
+                AppRoutes.addCatch),
+            _ActionButton(
+                'Blank', Icons.hourglass_bottom_outlined, AppRoutes.addBlank),
+            _ActionButton('Advice', Icons.tips_and_updates_outlined,
+                AppRoutes.recommendation),
           ],
         ),
       ],
@@ -85,6 +92,25 @@ class _ActionButton extends StatelessWidget {
         icon: Icon(icon),
         label: Text(label),
       ),
+    );
+  }
+}
+
+class _SessionInfoLine extends StatelessWidget {
+  const _SessionInfoLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text)),
+      ],
     );
   }
 }
@@ -136,7 +162,8 @@ class AddWaterReadingScreen extends StatelessWidget {
       primaryLabel: 'Save reading',
       fields: [
         TextField(decoration: InputDecoration(labelText: 'Water temp C')),
-        TextField(decoration: InputDecoration(labelText: 'Dissolved oxygen mg/L')),
+        TextField(
+            decoration: InputDecoration(labelText: 'Dissolved oxygen mg/L')),
         TextField(decoration: InputDecoration(labelText: 'pH')),
         TextField(decoration: InputDecoration(labelText: 'Depth m')),
       ],
@@ -157,7 +184,9 @@ class AddCatchScreen extends StatelessWidget {
         TextField(decoration: InputDecoration(labelText: 'Species')),
         TextField(decoration: InputDecoration(labelText: 'Weight lb')),
         TextField(decoration: InputDecoration(labelText: 'Weight oz')),
-        TextField(decoration: InputDecoration(labelText: 'Fish condition notes'), maxLines: 3),
+        TextField(
+            decoration: InputDecoration(labelText: 'Fish condition notes'),
+            maxLines: 3),
       ],
     );
   }
@@ -193,7 +222,11 @@ class PostSessionReviewScreen extends StatelessWidget {
           title: 'Outcome summary',
           icon: Icons.assignment_turned_in_outlined,
           children: [
-            Text('1 catch, 1 blank interval, 6.2 rod-hours, 5 observations.'),
+            _SessionInfoLine(
+              icon: Icons.info_outline,
+              text:
+                  'No live session outcome data is loaded yet. Saved catches, blanks, rod-hours and observations will appear here once attached to a session.',
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -202,7 +235,8 @@ class PostSessionReviewScreen extends StatelessWidget {
           icon: Icons.psychology_alt_outlined,
           children: [
             TextField(
-              decoration: InputDecoration(labelText: 'What changed the session?'),
+              decoration:
+                  InputDecoration(labelText: 'What changed the session?'),
               maxLines: 4,
             ),
           ],

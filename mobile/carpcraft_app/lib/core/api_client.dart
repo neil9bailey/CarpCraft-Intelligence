@@ -70,6 +70,15 @@ class CarpCraftApiClient {
         'Expected a list response from CarpCraft API.');
   }
 
+  Future<Map<String, dynamic>> deleteMap(String path) async {
+    final response = await _send('DELETE', path);
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+    throw const CarpCraftApiException(
+        'Expected an object response from CarpCraft API.');
+  }
+
   Future<dynamic> _send(String method, String path,
       {Map<String, dynamic>? body}) async {
     final client = HttpClient();

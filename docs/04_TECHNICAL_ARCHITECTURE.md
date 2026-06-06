@@ -21,7 +21,7 @@
 
 ## Mobile Layers
 
-- `core`: theme, constants and mock data.
+- `core`: API client, auth/session state, settings state and response models.
 - `core/api_client.dart`: development API client using `CARPCRAFT_API_BASE_URL` and `CARPCRAFT_USER_ID` dart defines.
 - `features`: dashboard, venues, sessions, recommendations and settings.
 - `shared`: reusable scaffold, cards, metrics and form shell.

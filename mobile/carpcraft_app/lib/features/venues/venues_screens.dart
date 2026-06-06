@@ -8,7 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app.dart';
 import '../../core/app_settings_state.dart';
 import '../../core/app_repository.dart';
-import '../../core/mock_data.dart';
+import '../../core/models.dart';
 import '../../shared/carp_scaffold.dart';
 
 class VenueMapArgs {
@@ -34,8 +34,8 @@ class _VenueListScreenState extends State<VenueListScreen> {
   final AppRepository _repository = const AppRepository();
   final TextEditingController _catalogueQueryController =
       TextEditingController();
-  late Future<List<MockVenue>> _venues;
-  late Future<List<MockFisheryProfile>> _catalogue;
+  late Future<List<VenueSummary>> _venues;
+  late Future<List<FisheryProfile>> _catalogue;
   bool _catalogueBusy = false;
 
   @override
@@ -57,20 +57,32 @@ class _VenueListScreenState extends State<VenueListScreen> {
     });
   }
 
-  Future<void> _seedCatalogue() async {
+  Future<void> _researchCatalogue() async {
+    final query = _catalogueQueryController.text.trim();
+    if (query.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a fishery name to research.')));
+      return;
+    }
     setState(() {
       _catalogueBusy = true;
     });
     try {
-      final query = _catalogueQueryController.text.trim();
-      final profiles = await _repository.seedFisheryCatalogue(
-          query: query.isEmpty ? null : query);
+      final profiles = await _repository.researchFisheryCatalogue(query);
       if (mounted) {
         setState(() {
           _catalogue = Future.value(profiles);
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Seeded ${profiles.length} fishery profiles.')));
+        final message = profiles.isEmpty
+            ? 'No live fishery profile was created from that research.'
+            : 'Created ${profiles.length} live fishery profile(s).';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Live fishery research failed: $error')));
       }
     } finally {
       if (mounted) {
@@ -88,7 +100,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
     });
   }
 
-  void _openFisheryMap(MockFisheryProfile profile) {
+  void _openFisheryMap(FisheryProfile profile) {
     if (!profile.hasCoordinates) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('No reviewed coordinates are attached yet.')));
@@ -125,7 +137,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
             TextField(
               controller: _catalogueQueryController,
               decoration: const InputDecoration(
-                  labelText: 'Search catalogued fisheries'),
+                  labelText: 'Search fisheries with AnglingAI'),
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _searchCatalogue(),
             ),
@@ -135,14 +147,14 @@ class _VenueListScreenState extends State<VenueListScreen> {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: _catalogueBusy ? null : _seedCatalogue,
+                  onPressed: _catalogueBusy ? null : _researchCatalogue,
                   icon: _catalogueBusy
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.auto_awesome_outlined),
-                  label: const Text('Seed catalogue'),
+                  label: const Text('Research fishery'),
                 ),
                 OutlinedButton.icon(
                   onPressed: _searchCatalogue,
@@ -152,20 +164,28 @@ class _VenueListScreenState extends State<VenueListScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            FutureBuilder<List<MockFisheryProfile>>(
+            FutureBuilder<List<FisheryProfile>>(
               future: _catalogue,
               builder: (context, snapshot) {
-                final profiles = snapshot.data ?? mockFisheryProfiles;
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.all(12),
                     child: LinearProgressIndicator(),
                   );
                 }
+                if (snapshot.hasError) {
+                  return _CompactInfoLine(
+                    icon: Icons.error_outline,
+                    text:
+                        'Catalogue search failed against the live API: ${snapshot.error}',
+                  );
+                }
+                final profiles = snapshot.data ?? <FisheryProfile>[];
                 if (profiles.isEmpty) {
                   return const _CompactInfoLine(
                     icon: Icons.info_outline,
-                    text: 'No private fishery profiles match this search.',
+                    text:
+                        'No private fishery profiles matched. Research a fishery to create a source-bound profile.',
                   );
                 }
                 return Column(
@@ -182,15 +202,21 @@ class _VenueListScreenState extends State<VenueListScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        FutureBuilder<List<MockVenue>>(
+        FutureBuilder<List<VenueSummary>>(
           future: _venues,
           builder: (context, snapshot) {
-            final venues = snapshot.data ?? mockVenues;
+            final venues = snapshot.data ?? <VenueSummary>[];
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                   child: Padding(
                       padding: EdgeInsets.all(24),
                       child: CircularProgressIndicator()));
+            }
+            if (venues.isEmpty) {
+              return const _CompactInfoLine(
+                icon: Icons.water_outlined,
+                text: 'No private venues saved yet.',
+              );
             }
             return Column(
               children: [
@@ -202,8 +228,11 @@ class _VenueListScreenState extends State<VenueListScreen> {
                       subtitle: Text(
                           '${venue.locationLabel} | ${venue.sessionCount} sessions | ${venue.privacy}'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () =>
-                          Navigator.pushNamed(context, AppRoutes.venueDetail),
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        AppRoutes.venueDetail,
+                        arguments: venue,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -235,7 +264,7 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
   final TextEditingController _stockController = TextEditingController();
   bool _saving = false;
   bool _lookingUp = false;
-  MockVenueIntelligence? _intelligence;
+  VenueIntelligenceReport? _intelligence;
   double? _approximateLatitude;
   double? _approximateLongitude;
   double? _acreage;
@@ -262,7 +291,7 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
   bool get _hasVenueCoordinates =>
       _approximateLatitude != null && _approximateLongitude != null;
 
-  void _applyIntelligence(MockVenueIntelligence intelligence) {
+  void _applyIntelligence(VenueIntelligenceReport intelligence) {
     final venue = intelligence.suggestedVenue;
     _lookupController.text =
         intelligence.query.isEmpty ? venue.name : intelligence.query;
@@ -295,10 +324,10 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
           _applyIntelligence(intelligence);
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('No grounded venue intelligence found.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('No grounded venue intelligence returned: $error')));
       }
     } finally {
       if (mounted) {
@@ -365,10 +394,10 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
         });
         Navigator.pop(context);
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Could not import venue intelligence.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Could not import venue intelligence: $error')));
       }
     } finally {
       if (mounted) {
@@ -420,20 +449,6 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                ActionChip(
-                  avatar: const Icon(Icons.water_outlined, size: 18),
-                  label: const Text('Linear'),
-                  onPressed: _lookingUp
-                      ? null
-                      : () => _lookupVenue('Linear Fisheries'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.water_outlined, size: 18),
-                  label: const Text('Norton Disney'),
-                  onPressed: _lookingUp
-                      ? null
-                      : () => _lookupVenue('Embryo Norton Disney'),
-                ),
                 FilledButton.icon(
                   onPressed: _lookingUp ? null : () => _lookupVenue(),
                   icon: _lookingUp
@@ -515,7 +530,7 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
   }
 
   List<Widget> _intelligenceSections(
-      BuildContext context, MockVenueIntelligence report) {
+      BuildContext context, VenueIntelligenceReport report) {
     return [
       const SizedBox(height: 12),
       SectionCard(
@@ -790,7 +805,7 @@ class _FisheryProfileCard extends StatelessWidget {
     required this.onMap,
   });
 
-  final MockFisheryProfile profile;
+  final FisheryProfile profile;
   final VoidCallback onMap;
 
   @override
@@ -916,8 +931,10 @@ class VenueDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final venue = args is VenueSummary ? args : null;
     return CarpScaffold(
-      title: 'Willow Mere',
+      title: venue?.name ?? 'Venue detail',
       actions: [
         IconButton(
           tooltip: 'Edit venue',
@@ -926,11 +943,18 @@ class VenueDetailScreen extends StatelessWidget {
         ),
       ],
       children: [
-        const SectionCard(
+        SectionCard(
           title: 'Private venue memory',
           icon: Icons.lock_outline,
           children: [
-            Text('7 sessions, 1 catch, 3 blank intervals, 4 mapped spots.'),
+            if (venue == null)
+              const Text('No saved venue was selected.')
+            else ...[
+              Text(venue.locationLabel),
+              const SizedBox(height: 8),
+              Text(
+                  '${venue.sessionCount} saved session(s). Privacy: ${venue.privacy}.'),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -960,7 +984,6 @@ class SwimListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const swims = ['Reed Corner', 'Dam Wall', 'North Point'];
     return CarpScaffold(
       title: 'Swims',
       floatingActionButton: FloatingActionButton(
@@ -968,19 +991,17 @@ class SwimListScreen extends StatelessWidget {
         onPressed: () => Navigator.pushNamed(context, AppRoutes.editSwim),
         child: const Icon(Icons.add_location_alt_outlined),
       ),
-      children: [
-        for (final swim in swims) ...[
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.place_outlined),
-              title: Text(swim),
-              subtitle: const Text('Pressure and wind exposure private'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pushNamed(context, AppRoutes.spotMap),
+      children: const [
+        SectionCard(
+          title: 'Private swims',
+          icon: Icons.place_outlined,
+          children: [
+            _CompactInfoLine(
+              icon: Icons.info_outline,
+              text: 'No live swims are loaded for this venue yet.',
             ),
-          ),
-          const SizedBox(height: 10),
-        ],
+          ],
+        ),
       ],
     );
   }
@@ -1174,24 +1195,34 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
     );
   }
 
-  Widget _buildFallbackMap() {
+  Widget _buildFallbackMap(BuildContext context) {
     return Stack(
       children: [
         Positioned.fill(
           child: CustomPaint(painter: _MapGridPainter()),
         ),
-        const Positioned(
-          left: 36,
-          top: 54,
-          child: _SpotPin(label: 'Reedline', icon: Icons.grass_outlined),
-        ),
-        const Positioned(
-          right: 42,
-          bottom: 70,
-          child: _SpotPin(label: 'Gravel bar', icon: Icons.terrain_outlined),
-        ),
-        const Center(
-          child: Icon(Icons.map_outlined, size: 56, color: Color(0xFF176B5B)),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.map_outlined,
+                    size: 56, color: Color(0xFF176B5B)),
+                const SizedBox(height: 12),
+                Text(
+                  'Google Maps key missing from this build',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Rebuild with GOOGLE_MAPS_API_KEY and enable Maps SDK for Android for com.carpcraft.intelligence.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -1245,7 +1276,7 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
                   },
                   onCameraIdle: _syncMapCamera,
                 )
-              : _buildFallbackMap(),
+              : _buildFallbackMap(context),
         ),
         Positioned(
           left: 12,
@@ -1299,10 +1330,25 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
   }
 
   Widget _buildMapTools() {
+    final keyState = _googleMapsApiKey.isEmpty
+        ? 'No Android Maps key in this build'
+        : 'Android Maps key present in this build';
     return SectionCard(
       title: 'Map tools',
       icon: Icons.tune_outlined,
       children: [
+        _CompactInfoLine(
+          icon: _googleMapsApiKey.isEmpty
+              ? Icons.key_off_outlined
+              : Icons.key_outlined,
+          text: keyState,
+        ),
+        const _CompactInfoLine(
+          icon: Icons.android_outlined,
+          text:
+              'Google Cloud restriction must allow package com.carpcraft.intelligence and the release SHA-1 used to sign this APK.',
+        ),
+        const SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SegmentedButton<MapType>(
@@ -1407,16 +1453,10 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
       title: 'Mapped evidence',
       icon: Icons.layers_outlined,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _SpotPin(label: 'Lake name', icon: Icons.label_outlined),
-            _SpotPin(label: 'Swim tag', icon: Icons.place_outlined),
-            _SpotPin(label: 'Depth map', icon: Icons.layers_outlined),
-            _SpotPin(label: '22 wraps', icon: Icons.straighten_outlined),
-            _SpotPin(label: '88 yards', icon: Icons.route_outlined),
-          ],
+        _CompactInfoLine(
+          icon: Icons.info_outline,
+          text:
+              'No live map evidence is saved yet. Tag the centre point or attach capture evidence to build this layer.',
         ),
       ],
     );
@@ -1451,23 +1491,6 @@ class _SpotMapScreenState extends State<SpotMapScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SpotPin extends StatelessWidget {
-  const _SpotPin({required this.label, required this.icon});
-
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 }

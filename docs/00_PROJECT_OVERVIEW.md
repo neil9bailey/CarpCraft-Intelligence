@@ -18,7 +18,7 @@ The product is not a catch predictor. It is an evidence-ranked assistant that he
 - FastAPI backend skeleton with route scaffolds.
 - Flutter Android-first mobile shell.
 - Deterministic rules engine and tests.
-- Documentation, legal/compliance drafts and sample data.
+- Documentation, legal/compliance drafts and focused test fixtures.
 
 ## Non-Goals For Phase A
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_settings_state.dart';
 import '../../core/app_repository.dart';
-import '../../core/mock_data.dart';
+import '../../core/models.dart';
 import '../../shared/carp_scaffold.dart';
 
 class RecommendationScreen extends StatefulWidget {
@@ -14,8 +14,8 @@ class RecommendationScreen extends StatefulWidget {
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
   final AppRepository _repository = const AppRepository();
-  late Future<MockRecommendation> _recommendation;
-  late Future<MockIntelligenceBrief> _brief;
+  late Future<RecommendationSummary> _recommendation;
+  late Future<IntelligenceBrief> _brief;
 
   @override
   void initState() {
@@ -43,21 +43,54 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         ),
       ],
       children: [
-        FutureBuilder<MockRecommendation>(
+        FutureBuilder<RecommendationSummary>(
           future: _recommendation,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+              return const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator()));
             }
-            return RecommendationCard(recommendation: snapshot.data ?? mockRecommendation);
+            if (snapshot.hasError || snapshot.data == null) {
+              return _LiveOutputErrorCard(
+                title: 'Bite opportunity',
+                icon: Icons.insights_outlined,
+                message:
+                    'No live recommendation was returned. Attach session/weather/observation evidence and refresh after the API is reachable.',
+                error: snapshot.error,
+              );
+            }
+            return RecommendationCard(recommendation: snapshot.data!);
           },
         ),
         const SizedBox(height: 12),
         if (AppSettingsState.instance.aiExplanationsEnabled)
-          FutureBuilder<MockIntelligenceBrief>(
+          FutureBuilder<IntelligenceBrief>(
             future: _brief,
             builder: (context, snapshot) {
-              final brief = snapshot.data ?? mockIntelligenceBrief;
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SectionCard(
+                  title: 'AI explanation',
+                  icon: Icons.psychology_outlined,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(12),
+                      child: LinearProgressIndicator(),
+                    ),
+                  ],
+                );
+              }
+              if (snapshot.hasError || snapshot.data == null) {
+                return _LiveOutputErrorCard(
+                  title: 'AI explanation',
+                  icon: Icons.psychology_outlined,
+                  message:
+                      'No live AI explanation is available. Explanations require a backend brief grounded in real session evidence.',
+                  error: snapshot.error,
+                );
+              }
+              final brief = snapshot.data!;
               return SectionCard(
                 title: 'AI explanation',
                 icon: Icons.psychology_outlined,
@@ -75,11 +108,9 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     _ExplanationLine(icon: Icons.info_outline, text: gap),
                   for (final warning in brief.safetyWarnings)
                     _ExplanationLine(
-                        icon: Icons.health_and_safety_outlined,
-                        text: warning),
+                        icon: Icons.health_and_safety_outlined, text: warning),
                   _ExplanationLine(
-                      icon: Icons.rule_outlined,
-                      text: brief.noGuaranteeNotice),
+                      icon: Icons.rule_outlined, text: brief.noGuaranteeNotice),
                 ],
               );
             },
@@ -100,6 +131,36 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 label: const Text('Enable explanations'),
               ),
             ],
+          ),
+      ],
+    );
+  }
+}
+
+class _LiveOutputErrorCard extends StatelessWidget {
+  const _LiveOutputErrorCard({
+    required this.title,
+    required this.icon,
+    required this.message,
+    this.error,
+  });
+
+  final String title;
+  final IconData icon;
+  final String message;
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: title,
+      icon: icon,
+      children: [
+        _ExplanationLine(icon: Icons.info_outline, text: message),
+        if (error != null)
+          _ExplanationLine(
+            icon: Icons.error_outline,
+            text: error.toString(),
           ),
       ],
     );
@@ -131,7 +192,7 @@ class _ExplanationLine extends StatelessWidget {
 class RecommendationCard extends StatelessWidget {
   const RecommendationCard({required this.recommendation, super.key});
 
-  final MockRecommendation recommendation;
+  final RecommendationSummary recommendation;
 
   @override
   Widget build(BuildContext context) {
@@ -169,10 +230,16 @@ class RecommendationCard extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                _InfoChip(icon: Icons.verified_outlined, label: 'Confidence ${recommendation.confidence}%'),
-                _InfoChip(icon: Icons.place_outlined, label: recommendation.zone),
-                _InfoChip(icon: Icons.layers_outlined, label: recommendation.layer),
-                _InfoChip(icon: Icons.restaurant_outlined, label: recommendation.baiting),
+                _InfoChip(
+                    icon: Icons.verified_outlined,
+                    label: 'Confidence ${recommendation.confidence}%'),
+                _InfoChip(
+                    icon: Icons.place_outlined, label: recommendation.zone),
+                _InfoChip(
+                    icon: Icons.layers_outlined, label: recommendation.layer),
+                _InfoChip(
+                    icon: Icons.restaurant_outlined,
+                    label: recommendation.baiting),
               ],
             ),
             const SizedBox(height: 18),
@@ -187,7 +254,9 @@ class RecommendationCard extends StatelessWidget {
               _Block(title: 'Pressure read', text: recommendation.barometricNote!),
             _ListBlock(title: 'Why', items: recommendation.why),
             _ListBlock(title: 'Data gaps', items: recommendation.dataGaps),
-            _Block(title: 'Alternative plan', text: recommendation.alternativePlan),
+            _Block(
+                title: 'Alternative plan',
+                text: recommendation.alternativePlan),
             if (recommendation.fishWelfareWarning != null)
               _WarningBlock(text: recommendation.fishWelfareWarning!),
             const SizedBox(height: 8),
@@ -218,7 +287,10 @@ class _ScorePill extends StatelessWidget {
       ),
       child: Text(
         value,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFF61420B)),
+        style: Theme.of(context)
+            .textTheme
+            .titleMedium
+            ?.copyWith(color: const Color(0xFF61420B)),
       ),
     );
   }

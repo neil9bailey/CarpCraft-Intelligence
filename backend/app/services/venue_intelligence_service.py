@@ -459,6 +459,11 @@ class VenueIntelligenceService:
             status.connector_name == "anglingai_venue_research" and status.status == "active"
             for status in connector_statuses
         )
+        if not anglingai_active:
+            raise ValueError(
+                f"AnglingAI venue research did not return live data for '{venue_name}'. "
+                "Check the backend AnglingAI key, quota and endpoint availability."
+            )
         google_active = external_place is not None
         confidence_score = 72 if anglingai_active and google_active else 60 if anglingai_active else 45
         advisory_items = [

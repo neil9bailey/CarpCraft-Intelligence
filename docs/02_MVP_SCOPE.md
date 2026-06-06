@@ -7,11 +7,11 @@
 - Pydantic API schemas for core entities.
 - In-memory repositories for early API shape testing.
 - Rules engine with deterministic confidence caps.
-- Flutter mobile shell with mock data and named routes.
+- Flutter mobile shell with named routes and live API wiring.
 - Android package identity and app label.
 - Docker Compose PostgreSQL service using a pgvector-ready image.
 - Documentation and compliance drafts.
-- Sample data for sessions, blanks, catches and recommendations.
+- Focused test fixtures for sessions, blanks, catches and recommendations.
 
 ## Out Of Scope For Phase A
 
