@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TESTING BUILD POLICY.
+  Cloud/production backends should use HTTPS. Cleartext HTTP is permitted here so
+  that LAN development backends (e.g. http://192.168.x.y:8000 or the emulator
+  host http://10.0.2.2:8000) work during live device testing.
+  Before a public production release, set cleartextTrafficPermitted="false" and,
+  if any plain-HTTP host is still required, scope it with a <domain-config>.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

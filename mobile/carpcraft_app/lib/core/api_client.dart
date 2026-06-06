@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'auth_state.dart';
+import 'runtime_config.dart';
 
 class CarpCraftApiException implements Exception {
   const CarpCraftApiException(this.message, {this.statusCode});
@@ -32,6 +33,16 @@ class CarpCraftApiClient {
   final String baseUrl;
   final String userId;
   final Duration timeout;
+
+  /// The base URL actually used for requests: a user-set runtime override (from
+  /// Settings) takes precedence over the value compiled into the build.
+  String get effectiveBaseUrl {
+    final override = RuntimeConfig.instance.apiBaseUrlOverride;
+    if (override != null && override.trim().isNotEmpty) {
+      return RuntimeConfig.instance.effectiveBaseUrl;
+    }
+    return baseUrl;
+  }
 
   Future<List<dynamic>> getList(String path) async {
     final response = await _send('GET', path);
@@ -85,7 +96,7 @@ class CarpCraftApiClient {
     client.connectionTimeout = timeout;
     try {
       final request = await client
-          .openUrl(method, Uri.parse('$baseUrl$path'))
+          .openUrl(method, Uri.parse('$effectiveBaseUrl$path'))
           .timeout(timeout);
       request.headers.contentType = ContentType.json;
       request.headers.set('X-CarpCraft-User-Id', userId);

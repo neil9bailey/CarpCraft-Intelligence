@@ -87,11 +87,14 @@ jobs:
 
       - name: Build release APK
         env:
+          # Consumed by Gradle for the AndroidManifest Maps key (native SDK)...
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
           flutter build apk --release \
             --dart-define=CARPCRAFT_API_BASE_URL=${{ steps.api.outputs.url }} \
-            --dart-define=CARPCRAFT_USER_ID=${{ vars.CARPCRAFT_USER_ID }}
+            --dart-define=CARPCRAFT_USER_ID=${{ vars.CARPCRAFT_USER_ID }} \
+            --dart-define=GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+            # ...and as a dart-define so the in-app map widget is enabled to match.
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

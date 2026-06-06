@@ -119,3 +119,44 @@ git tag v0.1.0 && git push origin v0.1.0
   (after creating `android/key.properties` from your keystore).
 - **Azure locally:** `scripts/build_push_backend_image.ps1 -ImageTag <acr>.azurecr.io/carpcraft-backend:latest -Execute`
   then `az containerapp update ...`, while signed in with `az login`.
+
+---
+
+## Troubleshooting live testing
+
+The app is **live-first**: there is no demo/offline data, so if it cannot reach a
+working backend, weather, venues and recommendations will be empty or show errors.
+
+### "Weather / venues / recommendations not working"
+1. Open **Settings -> Backend connection**, enter your backend URL (the Azure
+   Container App URL, or `http://<your-LAN-ip>:8000` for a dev server), tap
+   **Save**, then **Test connection**. A green "Connected" confirms reachability.
+   - The build's default is `http://10.0.2.2:8000`, which only works on an
+     Android *emulator*, never on a physical tablet — so on a tablet you must set
+     this.
+2. Weather uses Open-Meteo (no key needed) but the **backend** must have outbound
+   internet. A backend behind a strict egress policy returns empty weather.
+3. **Venue search** requires live, configured sources. Set `GOOGLE_PLACES_API_KEY`
+   (and optionally `ANGLINGAI_API_KEY`) on the backend, or use **Research fishery**
+   to create a source-bound profile. With no source keys, search legitimately
+   returns nothing.
+4. If the backend runs in production Entra mode (`AUTH_MODE=entra`,
+   `AUTH_REQUIRED=true`), you must **Sign in** (Settings -> Account) or every
+   request returns 401. For early testing, run the backend with the default
+   `AUTH_MODE=local`.
+
+### "Google Maps not working" (grey/blank map)
+The map needs the key in **two** places, and the release workflow now sets both:
+1. The **AndroidManifest** key (native Maps SDK) — from the `GOOGLE_MAPS_API_KEY`
+   secret via Gradle.
+2. The **`--dart-define=GOOGLE_MAPS_API_KEY`** — gates the in-app map widget.
+   (Before this was only set in the manifest, so the app showed "Maps key
+   missing" even when the key was present.)
+3. In Google Cloud, enable **Maps SDK for Android** and ensure the key's app
+   restriction allows package `com.carpcraft.intelligence` **and the SHA-1 of the
+   release keystore** used to sign the APK.
+
+### Cleartext HTTP
+Release builds now permit cleartext via `res/xml/network_security_config.xml` so
+LAN dev backends over `http://` work during testing. Production backends should
+use HTTPS; tighten this config before a public release.
