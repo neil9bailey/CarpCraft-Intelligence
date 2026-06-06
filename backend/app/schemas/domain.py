@@ -883,6 +883,10 @@ class Recommendation(ApiModel):
     data_gaps: list[str] = Field(default_factory=list)
     evidence_summary: list[str] = Field(default_factory=list)
     alternative_plan: str
+    seasonal_context: str | None = None
+    barometric_note: str | None = None
+    prime_feeding_windows: list[str] = Field(default_factory=list)
+    priority_actions: list[str] = Field(default_factory=list)
 
 
 class RecommendationOutcome(ApiModel):
@@ -915,6 +919,18 @@ class RecommendationContext(ApiModel):
     liners_without_takes: bool = False
     spawning_indicators: bool = False
     current_rods_zone: str | None = None
+    # Optional environmental and temporal context. These sharpen the plan when
+    # supplied but never invent facts: missing values are surfaced as data gaps.
+    pressure_hpa: float | None = Field(default=None, ge=850, le=1100)
+    pressure_trend_hpa_3h: float | None = None
+    cloud_cover_percent: int | None = Field(default=None, ge=0, le=100)
+    month: int | None = Field(default=None, ge=1, le=12)
+    local_hour: int | None = Field(default=None, ge=0, le=23)
+    is_first_or_last_light: bool = False
+    water_temp_trend_c_24h: float | None = None
+    wind_direction_label: str | None = None
+    moon_phase: str | None = None
+    recent_catch_count_7d: int | None = Field(default=None, ge=0)
 
 
 class RecommendationResult(ApiModel):
@@ -933,3 +949,7 @@ class RecommendationResult(ApiModel):
     data_gaps: list[str]
     alternative_plan: str
     fish_welfare_warning: str | None = None
+    seasonal_context: str | None = None
+    barometric_note: str | None = None
+    prime_feeding_windows: list[str] = Field(default_factory=list)
+    priority_actions: list[str] = Field(default_factory=list)

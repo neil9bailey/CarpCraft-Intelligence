@@ -259,6 +259,10 @@ class RecommendationRecord(Base):
     data_gaps: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     evidence_summary: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     alternative_plan: Mapped[str] = mapped_column(Text, nullable=False)
+    seasonal_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    barometric_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prime_feeding_windows: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    priority_actions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
 class RecommendationOutcomeRecord(Base):

@@ -9,6 +9,10 @@ The product is not a magical catch predictor and must never guarantee catches. I
 This repository contains the Phase A scaffold plus the first Phase B persistence slice:
 
 - FastAPI backend skeleton with route scaffolds and rule-engine tests.
+- Evidence-ranked watercraft recommendation engine that weighs water temperature and its trend, season, low-light feeding windows, barometric pressure and trend, wind character, oxygen risk, angling pressure, observations and recent venue form into a prioritised, reversible session plan with confidence and explicit data gaps.
+- Live session planning endpoint that assembles the engine context directly from a session's logged water readings, weather snapshot, observations, venue history and recent catches, and persists the plan for outcome review.
+- Grounded, offline knowledge retriever (carp-watercraft RAG) that feeds source-attributed evidence into the live AI brief without inventing facts; pgvector-ready for a future semantic upgrade.
+- GitHub Actions workflows for backend CI, release-signed Android APK builds and Azure Container Apps deployment (see `docs/17_CICD_AND_DEVICE_TESTING.md`).
 - SQLAlchemy/Alembic persistence with normalized core analytics tables.
 - Local auth plus production Microsoft Entra ID validation for the DIIAC tenant.
 - Flutter Android-first mobile skeleton with API wiring, DIIAC sign-in, hybrid maps and explicit geolocation action.

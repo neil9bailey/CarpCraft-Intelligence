@@ -236,6 +236,16 @@ class AppRepository {
     });
     return RecommendationSummary.fromJson(response);
   }
+
+  /// Generates a recommendation from a live session's logged evidence
+  /// (water readings, weather snapshot, observations, venue history and
+  /// recent catches), persisting it for later outcome review.
+  Future<RecommendationSummary> generateSessionPlan(String sessionId) async {
+    final encoded = Uri.encodeComponent(sessionId);
+    final response =
+        await api.postMap('/api/v1/recommendations/session/$encoded/plan', {});
+    return RecommendationSummary.fromJson(response);
+  }
 }
 
 String? _blankToNull(String? value) {

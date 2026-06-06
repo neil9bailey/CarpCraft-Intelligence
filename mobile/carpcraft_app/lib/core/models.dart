@@ -524,6 +524,10 @@ class RecommendationSummary {
     required this.dataGaps,
     required this.alternativePlan,
     this.fishWelfareWarning,
+    this.priorityActions = const [],
+    this.primeFeedingWindows = const [],
+    this.seasonalContext,
+    this.barometricNote,
   });
 
   final int biteOpportunity;
@@ -536,6 +540,10 @@ class RecommendationSummary {
   final List<String> dataGaps;
   final String alternativePlan;
   final String? fishWelfareWarning;
+  final List<String> priorityActions;
+  final List<String> primeFeedingWindows;
+  final String? seasonalContext;
+  final String? barometricNote;
 
   factory RecommendationSummary.fromJson(Map<String, dynamic> json) {
     final locationScore = _intValue(json['location_score']);
@@ -557,6 +565,10 @@ class RecommendationSummary {
       alternativePlan: json['alternative_plan'] as String? ??
           'Keep one option mobile and review outcomes.',
       fishWelfareWarning: json['fish_welfare_warning'] as String?,
+      priorityActions: _stringList(json['priority_actions']),
+      primeFeedingWindows: _stringList(json['prime_feeding_windows']),
+      seasonalContext: json['seasonal_context'] as String?,
+      barometricNote: json['barometric_note'] as String?,
     );
   }
 }

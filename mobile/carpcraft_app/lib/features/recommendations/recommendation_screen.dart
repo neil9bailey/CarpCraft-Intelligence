@@ -243,7 +243,15 @@ class RecommendationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
+            if (recommendation.priorityActions.isNotEmpty)
+              _ActionPlanBlock(actions: recommendation.priorityActions),
+            if (recommendation.primeFeedingWindows.isNotEmpty)
+              _PrimeWindowsBlock(windows: recommendation.primeFeedingWindows),
             _Block(title: 'Tactic', text: recommendation.tactic),
+            if (recommendation.seasonalContext != null)
+              _Block(title: 'Seasonal context', text: recommendation.seasonalContext!),
+            if (recommendation.barometricNote != null)
+              _Block(title: 'Pressure read', text: recommendation.barometricNote!),
             _ListBlock(title: 'Why', items: recommendation.why),
             _ListBlock(title: 'Data gaps', items: recommendation.dataGaps),
             _Block(
@@ -354,6 +362,85 @@ class _ListBlock extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionPlanBlock extends StatelessWidget {
+  const _ActionPlanBlock({required this.actions});
+
+  final List<String> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Priority action plan',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          for (var i = 0; i < actions.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondary.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Text('${i + 1}',
+                        style: Theme.of(context).textTheme.labelMedium),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(actions[i])),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrimeWindowsBlock extends StatelessWidget {
+  const _PrimeWindowsBlock({required this.windows});
+
+  final List<String> windows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Prime feeding windows',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final window in windows)
+                Chip(
+                  avatar: const Icon(Icons.schedule_outlined, size: 18),
+                  label: Text(window),
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+            ],
+          ),
         ],
       ),
     );

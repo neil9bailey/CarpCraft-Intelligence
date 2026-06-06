@@ -5,6 +5,7 @@ import '../../app.dart';
 import '../../core/auth_service.dart';
 import '../../core/auth_state.dart';
 import '../../shared/carp_scaffold.dart';
+import '../../shared/connectivity_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -84,6 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ],
       children: [
+        const ConnectivityBanner(),
         Text(
           'CarpCraft Intelligence',
           style: Theme.of(context).textTheme.headlineMedium,

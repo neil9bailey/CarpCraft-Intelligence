@@ -10,6 +10,7 @@ import '../../core/app_settings_state.dart';
 import '../../core/app_repository.dart';
 import '../../core/models.dart';
 import '../../shared/carp_scaffold.dart';
+import '../../shared/connectivity_banner.dart';
 
 class VenueMapArgs {
   const VenueMapArgs({
@@ -130,6 +131,7 @@ class _VenueListScreenState extends State<VenueListScreen> {
         child: const Icon(Icons.add),
       ),
       children: [
+        const ConnectivityBanner(),
         SectionCard(
           title: 'Fishery catalogue',
           icon: Icons.travel_explore_outlined,

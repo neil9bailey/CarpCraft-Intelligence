@@ -1,0 +1,73 @@
+name: Deploy Backend to Azure
+
+# Builds the backend image in Azure Container Registry and rolls it out to the
+# Container App. Triggered manually so deploys are deliberate.
+#
+# Required repository secret (Settings -> Secrets and variables -> Actions):
+#   AZURE_CREDENTIALS   output of:
+#     az ad sp create-for-rbac --name carpcraft-deploy \
+#       --role contributor \
+#       --scopes /subscriptions/<sub>/resourceGroups/<rg> \
+#       --sdk-auth
+# Required repository variables:
+#   AZURE_RESOURCE_GROUP   resource group of the Container App + ACR
+#   ACR_NAME               Azure Container Registry name (without .azurecr.io)
+#   CONTAINERAPP_NAME      target Container App name
+# Optional variable:
+#   BACKEND_IMAGE_REPO     image repository name (default: carpcraft-backend)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to build and deploy"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image coordinates
+        id: img
+        run: |
+          REPO="${{ vars.BACKEND_IMAGE_REPO }}"
+          if [ -z "$REPO" ]; then REPO="carpcraft-backend"; fi
+          TAG="${{ github.event.inputs.image_tag }}"
+          if [ -z "$TAG" ]; then TAG="${GITHUB_SHA::7}"; fi
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "image=${{ vars.ACR_NAME }}.azurecr.io/$REPO:$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build image in ACR
+        run: |
+          az acr build \
+            --registry "${{ vars.ACR_NAME }}" \
+            --image "${{ steps.img.outputs.repo }}:${{ steps.img.outputs.tag }}" \
+            ./backend
+
+      - name: Update Container App
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name "${{ vars.CONTAINERAPP_NAME }}" \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --image "${{ steps.img.outputs.image }}"
+
+      - name: Show revision status
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az containerapp show \
+              --name "${{ vars.CONTAINERAPP_NAME }}" \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --query "properties.latestRevisionName" -o tsv
