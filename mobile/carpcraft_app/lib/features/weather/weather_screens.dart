@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_repository.dart';
 import '../../core/models.dart';
 import '../../shared/carp_scaffold.dart';
+import '../../shared/connectivity_banner.dart';
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -41,6 +42,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
         ),
       ],
       children: [
+        const ConnectivityBanner(),
         FutureBuilder<WeatherConditionSnapshot>(
           future: _conditions,
           builder: (context, snapshot) {
