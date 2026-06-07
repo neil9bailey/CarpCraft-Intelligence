@@ -12,7 +12,7 @@ This is an operational checklist, not legal advice.
 - Build debug APK for local testing.
 - Prepare Android App Bundle only after signing and release configuration are reviewed.
 - Configure Google Maps API key restrictions for package `com.carpcraft.intelligence`.
-- If venue enrichment will call Google Places from the backend, configure a separate `GOOGLE_PLACES_API_KEY` with Places API enabled and server/IP restrictions.
+- If venue enrichment will call Google Places from the backend, configure a separate `GOOGLE_PLACES_API_KEY` with Places API enabled and server/IP restrictions, then set `GOOGLE_PLACES_ENABLED=true`.
 - Configure Met Office DataHub access if authoritative UK weather cross-checks are required in the release environment.
 - Verify DIIAC Entra app registrations and consent before internal testing.
 - Verify every production-facing fishery data source is an actual live integration or official fishery source before importing availability, rules, prices or public catch reports.

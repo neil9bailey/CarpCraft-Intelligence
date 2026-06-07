@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     met_office_api_key: str | None = Field(default=None, alias="MET_OFFICE_API_KEY")
     met_office_base_url: str = Field(default="https://data.hub.api.metoffice.gov.uk", alias="MET_OFFICE_BASE_URL")
     google_maps_api_key: str | None = Field(default=None, alias="GOOGLE_MAPS_API_KEY")
+    google_places_enabled: bool = Field(default=False, alias="GOOGLE_PLACES_ENABLED")
     google_places_api_key: str | None = Field(default=None, alias="GOOGLE_PLACES_API_KEY")
     google_places_base_url: str = Field(default="https://places.googleapis.com", alias="GOOGLE_PLACES_BASE_URL")
     ai_explanations_enabled: bool = Field(default=False, alias="AI_EXPLANATIONS_ENABLED")

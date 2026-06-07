@@ -139,9 +139,10 @@ working backend, weather, venues and recommendations will be empty or show error
      this.
 2. Weather uses Open-Meteo (no key needed) but the **backend** must have outbound
    internet. A backend behind a strict egress policy returns empty weather.
-3. **Venue search** requires live, configured sources. Set `GOOGLE_PLACES_API_KEY`
-   (and optionally `ANGLINGAI_API_KEY`) on the backend, or use **Research fishery**
-   to create a source-bound profile. With no source keys, search legitimately
+3. **Venue search** requires live, configured sources. Set `ANGLINGAI_API_KEY`
+   on the backend for dynamic fishery research. Enable backend Google Places only
+   after a server/IP-restricted key works by setting `GOOGLE_PLACES_ENABLED=true`
+   and `GOOGLE_PLACES_API_KEY`. With no live source keys, search legitimately
    returns nothing.
 4. If the backend runs in production Entra mode (`AUTH_MODE=entra`,
    `AUTH_REQUIRED=true`), you must **Sign in** (Settings -> Account) or every

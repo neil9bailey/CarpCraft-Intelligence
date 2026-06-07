@@ -308,7 +308,9 @@ def test_anglingai_venue_research_connector_adds_source_bound_evidence(monkeypat
     get_settings.cache_clear()
 
 
-def test_default_connectors_are_integrated_sources_only() -> None:
+def test_default_connectors_are_integrated_sources_only(monkeypatch) -> None:
+    monkeypatch.delenv("GOOGLE_PLACES_ENABLED", raising=False)
+    get_settings.cache_clear()
     report = VenueIntelligenceService(
         weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
         source_connectors=[],
@@ -318,4 +320,10 @@ def test_default_connectors_are_integrated_sources_only() -> None:
     from app.services.venue_source_connectors import default_venue_source_connectors
 
     connector_names = {connector.connector_name for connector in default_venue_source_connectors()}
-    assert connector_names == {"google_places", "anglingai_venue_research"}
+    assert connector_names == {"anglingai_venue_research"}
+
+    monkeypatch.setenv("GOOGLE_PLACES_ENABLED", "true")
+    get_settings.cache_clear()
+    enabled_connector_names = {connector.connector_name for connector in default_venue_source_connectors()}
+    assert enabled_connector_names == {"google_places", "anglingai_venue_research"}
+    get_settings.cache_clear()

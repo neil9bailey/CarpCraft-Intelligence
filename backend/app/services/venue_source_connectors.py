@@ -334,7 +334,7 @@ class AnglingAIVenueResearchConnector:
 
 
 def default_venue_source_connectors() -> list[VenueSourceConnector]:
-    return [
-        GooglePlacesConnector(),
-        AnglingAIVenueResearchConnector(),
-    ]
+    connectors: list[VenueSourceConnector] = [AnglingAIVenueResearchConnector()]
+    if get_settings().google_places_enabled:
+        connectors.insert(0, GooglePlacesConnector())
+    return connectors
