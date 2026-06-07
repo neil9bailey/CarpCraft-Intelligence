@@ -183,18 +183,24 @@ class GooglePlacesConnector:
 class AnglingAIVenueResearchConnector:
     connector_name = "anglingai_venue_research"
     advisory_fields = {
+        "location": "Location",
         "recommendedMethods": "Recommended methods",
         "baits": "Bait notes",
         "bestSpots": "Best spots",
         "seasonalPatterns": "Seasonal patterns",
+        "access": "Access information",
         "accessInfo": "Access information",
         "openingTimes": "Opening times",
         "facilities": "Facilities",
         "ticketInfo": "Ticket information",
         "pricing": "Pricing",
         "booking": "Booking information",
+        "approximateSize": "Lake information",
         "lakeInfo": "Lake information",
         "stock": "Stock notes",
+        "practicalTips": "Practical tips",
+        "boatFishing": "Boat fishing",
+        "venueType": "Venue type",
         "rules": "Rules",
     }
 
@@ -218,7 +224,7 @@ class AnglingAIVenueResearchConnector:
     def _summary(data: dict[str, object], venue: Venue) -> str:
         sections = [
             section
-            for section in ("targetSpecies", "recommendedMethods", "baits", "bestSpots", "seasonalPatterns", "rules")
+            for section in ("targetSpecies", "location", "recommendedMethods", "baits", "bestSpots", "seasonalPatterns", "access", "rules")
             if data.get(section)
         ]
         if sections:

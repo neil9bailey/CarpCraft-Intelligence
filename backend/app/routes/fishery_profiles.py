@@ -146,7 +146,8 @@ def _profile_sections(
         _section(
             "location",
             "Location and navigation",
-            [venue.location_label or "Approximate location not set.", coordinates],
+            [venue.location_label or "Approximate location not set.", coordinates]
+            + _anglingai_advisory_items(report, ("Location",)),
             _source_urls(report, "official") + [report.external_place.google_maps_uri]
             if report.external_place and report.external_place.google_maps_uri
             else _source_urls(report, "official"),
