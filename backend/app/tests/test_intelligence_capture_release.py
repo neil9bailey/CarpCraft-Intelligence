@@ -27,7 +27,10 @@ def _enable_live_anglingai(monkeypatch) -> None:  # noqa: ANN001
                     "venueName": json.get("venueName", "Test fishery"),
                     "recommendedMethods": ["solid bags"],
                     "bestSpots": ["review cited sources before normalising"],
+                    "accessInfo": ["use the current official fishery access page"],
+                    "facilities": ["review current fishery facilities before travelling"],
                     "rules": ["check current fishery rules"],
+                    "pricing": ["verify prices from official fishery evidence"],
                     "confidence": {"score": 82},
                     "sources": [
                         {
@@ -162,8 +165,8 @@ def test_fishery_profile_import_is_private_and_source_bound(monkeypatch) -> None
         assert profile["privacy_level"] == "private"
         assert profile["sharing_scope"] == "private"
         assert profile["confidence_score"] >= 80
-        assert any("Catch" in option["platform_name"] for option in profile["booking_options"])
-        assert any("Swimbooker" in gap or "swimbooker" in gap for gap in profile["data_gaps"])
+        assert all("Catch" not in option["platform_name"] for option in profile["booking_options"])
+        assert all("Swimbooker" not in gap and "swimbooker" not in gap for gap in profile["data_gaps"])
         assert {section["category"] for section in profile["sections"]} >= {
             "location",
             "access",
@@ -171,6 +174,9 @@ def test_fishery_profile_import_is_private_and_source_bound(monkeypatch) -> None
             "lakes",
             "booking",
         }
+        assert any("use the current official fishery access page" in item for item in profile["access_notes"])
+        assert any("review current fishery facilities" in item for item in profile["facilities"])
+        assert any("check current fishery rules" in item for item in profile["rules"])
         assert profile["gate_closure_notes"]
         assert profile["facilities"]
 

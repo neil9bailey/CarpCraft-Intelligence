@@ -691,9 +691,8 @@ class _EditVenueScreenState extends State<EditVenueScreen> {
     return switch (status) {
       'active' => Icons.check_circle_outline,
       'request_failed' => Icons.error_outline,
-      'blocked_by_policy' => Icons.block_outlined,
-      'partner_required' => Icons.handshake_outlined,
-      'manual_directory' => Icons.manage_search_outlined,
+      'not_configured' => Icons.settings_outlined,
+      'no_match' => Icons.manage_search_outlined,
       _ => Icons.info_outline,
     };
   }

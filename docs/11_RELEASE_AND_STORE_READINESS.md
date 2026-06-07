@@ -15,8 +15,8 @@ This is an operational checklist, not legal advice.
 - If venue enrichment will call Google Places from the backend, configure a separate `GOOGLE_PLACES_API_KEY` with Places API enabled and server/IP restrictions.
 - Configure Met Office DataHub access if authoritative UK weather cross-checks are required in the release environment.
 - Verify DIIAC Entra app registrations and consent before internal testing.
-- Verify Catch/GoCatch and swimbooker data access through official partner/API routes or manual fishery-approved links before importing availability or user catch reports.
-- Do not scrape Facebook groups. Use explicit user-provided links, fishery-owned public pages, or a future compliant connector only.
+- Verify every production-facing fishery data source is an actual live integration or official fishery source before importing availability, rules, prices or public catch reports.
+- Do not scrape groups or social feeds. Use explicit user evidence, fishery-owned public pages, or a future compliant connector only.
 - Keep public fishery map and depth-map images as source links until licensing review marks them cacheable.
 
 ## Play Console Preparation

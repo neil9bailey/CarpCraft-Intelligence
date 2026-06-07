@@ -51,6 +51,6 @@ AI output should remain secondary to deterministic scores.
 ## MCP Agent Boundaries
 
 - Agent runs must store objective, status, evidence, data gaps and review state.
-- Agent runs must not scrape private accounts or Facebook groups.
-- Catch, Swimbooker and fishery directory data must come from official partner APIs, approved exports, user-supplied links or fishery-approved public pages.
+- Agent runs must not scrape private accounts, groups or social feeds.
+- Fishery data must come from integrated live providers, official fishery pages, explicit user evidence, or fishery-approved public pages. Unsupported partner sources must not be shown as active integrations.
 - Public sharing of generated fishery profiles requires explicit consent and source/licensing review.

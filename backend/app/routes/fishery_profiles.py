@@ -35,8 +35,11 @@ def _access_mode(source_type: str) -> SourceAccessMode:
 
 
 def _is_booking_source(source_name: str, source_type: str) -> bool:
-    haystack = f"{source_name} {source_type}".lower()
-    return "catch" in haystack or "gocatch" in haystack or "swimbooker" in haystack or "booking" in haystack
+    del source_name
+    normalized_type = source_type.lower()
+    return normalized_type.startswith("official_") and (
+        "price" in normalized_type or "booking" in normalized_type or "visit" in normalized_type
+    )
 
 
 def _list_metadata(report: VenueIntelligenceReport, key: str) -> list[str]:
@@ -64,6 +67,18 @@ def _has_live_anglingai_research(report: VenueIntelligenceReport) -> bool:
         status.connector_name == "anglingai_venue_research" and status.status == "active"
         for status in report.connector_statuses
     )
+
+
+def _anglingai_advisory_items(report: VenueIntelligenceReport, titles: tuple[str, ...]) -> list[str]:
+    normalized_titles = tuple(title.lower() for title in titles)
+    items: list[str] = []
+    for source in report.source_evidence:
+        if source.source_name != "AnglingAI" or source.source_type != "external_ai_advisory_context":
+            continue
+        title = source.title.lower()
+        if any(expected in title for expected in normalized_titles):
+            items.append(f"{source.title}: {source.summary}")
+    return items
 
 
 def _section(
@@ -97,6 +112,17 @@ def _profile_sections(
     how_to_book_notes: str | None,
 ) -> list[FisheryProfileSection]:
     venue = report.suggested_venue
+    lake_items = [
+        " | ".join(
+            [
+                lake.name,
+                f"{lake.acreage:g} acres" if lake.acreage is not None else "",
+                f"{lake.swim_count} swims" if lake.swim_count is not None else "",
+                "depth map linked" if lake.depth_map_url else "",
+            ]
+        ).strip(" |")
+        for lake in lakes
+    ] + _anglingai_advisory_items(report, ("Lake information", "Best spots"))
     coordinates = (
         f"Approximate coordinates: {venue.approximate_latitude:.5f}, {venue.approximate_longitude:.5f}"
         if venue.approximate_latitude is not None and venue.approximate_longitude is not None
@@ -166,17 +192,7 @@ def _profile_sections(
         _section(
             "lakes",
             "Lakes, swims and depth maps",
-            [
-                " | ".join(
-                    [
-                        lake.name,
-                        f"{lake.acreage:g} acres" if lake.acreage is not None else "",
-                        f"{lake.swim_count} swims" if lake.swim_count is not None else "",
-                        "depth map linked" if lake.depth_map_url else "",
-                    ]
-                ).strip(" |")
-                for lake in lakes
-            ],
+            lake_items,
             [url for lake in lakes for url in (lake.source_url, lake.depth_map_url) if url],
             confidence=report.confidence_score,
         ),
@@ -207,15 +223,25 @@ def _build_profile_from_report(report: VenueIntelligenceReport, principal: Princ
     parking_notes = _list_metadata(report, "parking_notes")
     facilities = _list_metadata(report, "facilities")
     rules = _list_metadata(report, "rules")
+    access_notes.extend(_anglingai_advisory_items(report, ("Access information",)))
+    opening_times_notes.extend(_anglingai_advisory_items(report, ("Opening times",)))
+    facilities.extend(_anglingai_advisory_items(report, ("Facilities",)))
+    rules.extend(_anglingai_advisory_items(report, ("Rules",)))
+    advisory_costs = _anglingai_advisory_items(report, ("Pricing", "Ticket information"))
+    advisory_booking = _anglingai_advisory_items(report, ("Booking information",))
     costs_notes = _text_metadata(
         report,
         "costs_notes",
-        "Costs are intentionally source-bound. Confirm current pricing through Catch, Swimbooker or the official fishery page before sharing.",
+        " ".join(advisory_costs)
+        if advisory_costs
+        else "Costs are intentionally source-bound. Confirm current pricing through the official fishery page before sharing.",
     )
     how_to_book_notes = _text_metadata(
         report,
         "how_to_book_notes",
-        "Use approved partner/API access, fishery-approved links, or manual review from your Catch/Swimbooker accounts.",
+        " ".join(advisory_booking)
+        if advisory_booking
+        else "Use official fishery pages or integrated source evidence for current booking instructions.",
     )
 
     sources = [
@@ -298,7 +324,7 @@ def _build_profile_from_report(report: VenueIntelligenceReport, principal: Princ
         licensing_notes=report.licensing_notes,
         data_gaps=[
             *report.data_gaps,
-            "Live Catch and Swimbooker availability/cost import needs partner API access, approved export files or fishery-approved profile links.",
+            "Booking availability and costs are included only when current integrated or official source evidence provides them.",
             "Do not cache public swim/depth map images until licensing review marks them cacheable.",
         ],
     )

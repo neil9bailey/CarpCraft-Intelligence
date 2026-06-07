@@ -39,7 +39,6 @@ Optional future secrets:
 
 - `openai-api-key`
 - `catch-partner-api-key`
-- `swimbooker-partner-api-key`
 
 ## Plan Deployment
 
@@ -110,9 +109,9 @@ Production backend environment must use:
 
 ## Partner Data
 
-Catch, Swimbooker and AnglingAI integrations must stay source-bound:
+Fishery-data integrations must stay source-bound:
 
-- Use official partner APIs, approved exports or fishery-approved profile links.
-- Do not scrape private accounts, public/private Facebook groups or copyrighted maps.
+- Use integrated live providers, official fishery pages, explicit user evidence or fishery-approved profile links.
+- Do not scrape private accounts, groups, social feeds or copyrighted maps.
 - Store public swim/depth maps as source links unless licensing review marks them cacheable.
 - Treat external AI output as advisory evidence until reviewed against CarpCraft logs and fishery rules.

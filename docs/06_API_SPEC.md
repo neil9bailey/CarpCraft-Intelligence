@@ -62,11 +62,11 @@ Route data now persists through SQLAlchemy once migrations have been applied. Ve
 
 `GET /api/v1/weather-snapshots/live/conditions` returns the same provider evidence plus condition labels, wind direction, precipitation intensity and an approximate surface-water temperature. The water temperature is an inference with confidence and data gaps, not a measured reading.
 
-`GET /api/v1/venues/intelligence/lookup?query=...` returns a grounded venue intelligence report with source evidence, connector statuses, licensing notes, data gaps, ethical warnings and optional live weather. Known official-source packs can augment a result, but fishery profile creation requires active live AnglingAI venue-research evidence. Google Places Text Search enrichment is attempted when `GOOGLE_PLACES_API_KEY` is configured. Catch/GoCatch and swimbooker are reported as partner/manual connectors until official API access is configured. Facebook group ingestion is reported as blocked; the product must not scrape groups.
+`GET /api/v1/venues/intelligence/lookup?query=...` returns a grounded venue intelligence report with source evidence, connector statuses, licensing notes, data gaps, ethical warnings and optional live weather. Known official-source packs can augment a result, but fishery profile creation requires active live AnglingAI venue-research evidence. Google Places Text Search enrichment is attempted when `GOOGLE_PLACES_API_KEY` is configured. Production-facing connector statuses are limited to integrated sources; unsupported partner or social sources are not surfaced as pseudo-connectors.
 
 `POST /api/v1/venues/intelligence/import?query=...` creates or updates a private user-owned venue and starter swim records from the grounded report. Public map/depth assets remain source links only unless `cache_allowed` is explicitly true after licensing review.
 
-`POST /api/v1/fishery-profiles/from-venue-intelligence?query=...` creates a private fishery profile from a grounded venue report. Booking/cost entries stay source-bound and require partner/API/export verification before public use.
+`POST /api/v1/fishery-profiles/from-venue-intelligence?query=...` creates a private fishery profile from a grounded venue report. Booking/cost entries stay source-bound and are included only when official or integrated source evidence provides them.
 
 `POST /api/v1/capture-assets` stores camera/gallery metadata, image annotations, distance/wrap/depth fields, bottom/weed/algae state and rig/bait notes. Captures are private by default. Public sharing requires explicit `public_sharing_consent=true`; precise latitude/longitude requires `precise_location_user_enabled=true`.
 

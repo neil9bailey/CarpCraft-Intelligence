@@ -20,7 +20,7 @@ Reviewed on 2026-06-04 against `https://anglingai.co.uk/docs` and the production
 
 AnglingAI Pro is not currently an "all fisheries directory" feed. Use it as an enrichment layer:
 
-1. Seed candidate fisheries from approved sources: official fishery pages, Google Places, Catch/GoCatch partner links, Swimbooker partner links, or user-provided account exports.
+1. Seed candidate fisheries from integrated sources: official fishery pages, Google Places, AnglingAI venue research, or explicit user-provided evidence.
 2. Call AnglingAI `venue-research` for each seed name/location.
 3. Store the output as external advisory evidence with cited source links and confidence.
 4. Normalize only reviewed facts into CarpCraft `FisheryProfile`, `Venue`, `Swim`, `MapAsset`, `rules`, `costs` and `booking` fields.

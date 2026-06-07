@@ -121,7 +121,7 @@ def test_venue_intelligence_lookup_returns_grounded_embryo_report() -> None:
     assert all(not asset.cache_allowed for asset in report.map_assets)
     assert any("cache blocked" in note for note in report.licensing_notes)
     assert any("Pettitt" in swim.name and swim.depth_map_url for swim in report.swims)
-    assert any("Facebook" in gap for gap in report.data_gaps)
+    assert any("Social updates are not integrated" in gap for gap in report.data_gaps)
     assert "Never disturb spawning fish." in report.ethical_warnings
 
 
@@ -308,22 +308,14 @@ def test_anglingai_venue_research_connector_adds_source_bound_evidence(monkeypat
     get_settings.cache_clear()
 
 
-def test_default_connectors_report_partner_and_policy_gaps() -> None:
+def test_default_connectors_are_integrated_sources_only() -> None:
     report = VenueIntelligenceService(
         weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
         source_connectors=[],
     ).lookup("Linear Fisheries")
     assert report.connector_statuses == []
 
-    from app.services.venue_source_connectors import CatchGoCatchConnector, FacebookGroupsConnector, SwimbookerConnector
+    from app.services.venue_source_connectors import default_venue_source_connectors
 
-    report = VenueIntelligenceService(
-        weather_service=WeatherService(providers=[_StaticWeatherProvider()]),
-        source_connectors=[CatchGoCatchConnector(), SwimbookerConnector(), FacebookGroupsConnector()],
-    ).lookup("Linear Fisheries")
-
-    statuses = {status.connector_name: status.status for status in report.connector_statuses}
-    assert statuses["catch_gocatch"] == "partner_required"
-    assert statuses["swimbooker"] == "manual_directory"
-    assert statuses["facebook_groups"] == "blocked_by_policy"
-    assert any("permission" in gap.lower() for status in report.connector_statuses for gap in status.data_gaps)
+    connector_names = {connector.connector_name for connector in default_venue_source_connectors()}
+    assert connector_names == {"google_places", "anglingai_venue_research"}

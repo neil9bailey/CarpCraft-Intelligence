@@ -75,7 +75,7 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
             ),
             "summary": (
                 "Linear Fisheries is a large Oxfordshire carp complex with day-ticket, Tar Farm and syndicate waters. "
-                "The intelligence pack links official waters, map, rules, Catch booking references and latest-catch pages."
+                "The intelligence pack links official waters, map, rules, prices and latest-catch pages."
             ),
             "swims": [
                 VenueSwimIntelligence(
@@ -95,12 +95,12 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                 ),
                 VenueSwimIntelligence(
                     name="Hunts Corner Lake",
-                    stock_notes="Listed by Linear as a day-ticket water and referenced for Catch bookings.",
+                    stock_notes="Listed by Linear as a day-ticket water.",
                     source_url="https://www.linear-fisheries.co.uk/index.cfm?fuseaction=waters.start",
                 ),
                 VenueSwimIntelligence(
                     name="Manor Farm Lake",
-                    stock_notes="Listed by Linear as a day-ticket water and referenced for Catch bookings.",
+                    stock_notes="Listed by Linear as a day-ticket water.",
                     source_url="https://www.linear-fisheries.co.uk/index.cfm?fuseaction=waters.start",
                 ),
                 VenueSwimIntelligence(
@@ -141,21 +141,14 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                     source_name="Linear Fisheries",
                 ),
             ],
-            "news_items": [
-                _news(
-                    title="Catch booking reference",
-                    summary="Linear states that Manor Farm, Hunts Corner and Tar Farm Lakes bookings are available through GoCatch/Catch.",
-                    url="https://www.linear-fisheries.co.uk/",
-                    source_name="Linear Fisheries",
-                )
-            ],
+            "news_items": [],
             "source_evidence": [
                 _source(
                     "Linear Fisheries",
                     "official_fishery_site",
                     "https://www.linear-fisheries.co.uk/",
                     "Official Linear Fisheries homepage",
-                    "Official source for fishery overview, rules, maps, latest catches and Catch booking references.",
+                    "Official source for fishery overview, rules, maps, prices and latest catches.",
                     95,
                 ),
                 _source(
@@ -179,7 +172,7 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                     "official_prices",
                     "https://www.linear-fisheries.co.uk/index.cfm?fuseaction=main.prices",
                     "Official prices and booking notes",
-                    "Lists general day-ticket pricing and GoCatch/Catch booking for selected waters.",
+                    "Lists day-ticket pricing and current official booking notes for selected waters.",
                     95,
                 ),
                 _source(
@@ -190,27 +183,17 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                     "Describes the shower/toilet block, drinking-water tap, parking areas and porta loos.",
                     90,
                 ),
-                _source(
-                    "Catch / GoCatch",
-                    "booking_directory",
-                    "https://www.gocatch.fish/",
-                    "Catch venue and booking platform",
-                    "Linear links bookings for selected waters through the GoCatch/Catch platform.",
-                    75,
-                ),
             ],
             "data_gaps": [
                 "Individual swim boundaries and detailed bathymetry are not normalized yet from official Linear map images.",
-                "Catch App and Facebook group data should be consumed through official APIs, user-provided links or explicit venue permission.",
+                "Third-party booking and social data is not integrated in this build; use official fishery pages and live AnglingAI/Google evidence only.",
                 "Do not infer current form from latest-catch reports without your own session evidence.",
             ],
             "costs_notes": (
-                "Official Linear prices page lists general day-ticket waters as pay-as-you-go and Manor Farm, Hunts Corner and Tar Farm "
-                "as online-bookable via GoCatch/Catch; always verify current prices before travelling."
+                "Official Linear prices page lists current day-ticket and selected-water booking notes; always verify current prices before travelling."
             ),
             "how_to_book_notes": (
-                "General day-ticket waters are pay-as-you-go; selected Manor Farm, Hunts Corner and Tar Farm waters use online booking "
-                "through GoCatch/Catch according to Linear's official pricing and water pages."
+                "Use Linear's official pricing and water pages for the current booking route before travelling."
             ),
             "access_notes": [
                 "Waters are described by Linear as open for 24-hour fishing, with gates locked overnight for security.",
@@ -362,7 +345,7 @@ SOURCE_PACKS: dict[str, VenueIntelligenceSourcePack] = {
                 ),
             ],
             "data_gaps": [
-                "Public Facebook and Instagram updates are referenced by Embryo but should not be scraped without permission or a proper connector.",
+                "Social updates are not integrated in this build; use official fishery pages and live AnglingAI/Google evidence only.",
                 "Depth maps need licensing review before caching image copies inside the app.",
                 "Current catch reports should be separated from static stock lists before feeding recommendation logic.",
             ],

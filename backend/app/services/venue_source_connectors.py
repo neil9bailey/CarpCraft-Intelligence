@@ -188,6 +188,13 @@ class AnglingAIVenueResearchConnector:
         "bestSpots": "Best spots",
         "seasonalPatterns": "Seasonal patterns",
         "accessInfo": "Access information",
+        "openingTimes": "Opening times",
+        "facilities": "Facilities",
+        "ticketInfo": "Ticket information",
+        "pricing": "Pricing",
+        "booking": "Booking information",
+        "lakeInfo": "Lake information",
+        "stock": "Stock notes",
         "rules": "Rules",
     }
 
@@ -320,85 +327,8 @@ class AnglingAIVenueResearchConnector:
         )
 
 
-class CatchGoCatchConnector:
-    connector_name = "catch_gocatch"
-
-    def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
-        evidence = [
-            _source(
-                "Catch / GoCatch",
-                "partner_booking_directory",
-                "https://www.gocatch.fish/",
-                "Catch venue and booking platform",
-                "Catch publishes venue booking/directory information, but CarpCraft has no public API contract in this build.",
-                70,
-                "Use official partner API access, fishery-provided links, or manual verification before importing availability or catch reports.",
-            )
-        ]
-        return VenueConnectorResult(
-            status=_status(
-                self.connector_name,
-                "Catch / GoCatch",
-                "partner_required",
-                "Ready for a partner/API connector; current release records source links and gaps only.",
-                evidence_count=len(evidence),
-                data_gaps=["Partner API credentials or fishery-provided Catch venue links are required for live availability/catch-report ingestion."],
-            ),
-            evidence=evidence,
-        )
-
-
-class SwimbookerConnector:
-    connector_name = "swimbooker"
-
-    def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
-        evidence = [
-            _source(
-                "swimbooker",
-                "booking_directory",
-                "https://swimbooker.com/",
-                "swimbooker fisheries directory",
-                "swimbooker publishes fishery booking/directory information, but no stable public API is wired in this build.",
-                68,
-                "Use official partner/API access or manually verified fishery profile links before importing availability or user catch reports.",
-            )
-        ]
-        return VenueConnectorResult(
-            status=_status(
-                self.connector_name,
-                "swimbooker",
-                "manual_directory",
-                "Ready for manual source links or future partner API integration.",
-                evidence_count=len(evidence),
-                data_gaps=["No public Swimbooker API contract is configured for automated venue/catch-report import."],
-            ),
-            evidence=evidence,
-        )
-
-
-class FacebookGroupsConnector:
-    connector_name = "facebook_groups"
-
-    def enrich(self, query: str, venue: Venue) -> VenueConnectorResult:
-        return VenueConnectorResult(
-            status=_status(
-                self.connector_name,
-                "Facebook groups",
-                "blocked_by_policy",
-                "Facebook group scraping/import is disabled; use explicit user-provided links or fishery-owned public pages only.",
-                data_gaps=[
-                    "Facebook Groups API access is not available for CarpCraft automated group ingestion.",
-                    "Do not scrape private or public groups without explicit permission and a compliant connector.",
-                ],
-            )
-        )
-
-
 def default_venue_source_connectors() -> list[VenueSourceConnector]:
     return [
         GooglePlacesConnector(),
         AnglingAIVenueResearchConnector(),
-        CatchGoCatchConnector(),
-        SwimbookerConnector(),
-        FacebookGroupsConnector(),
     ]
