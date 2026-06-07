@@ -325,6 +325,16 @@ def _create_profile(
     return build_repository(db, "fishery-profiles", FisheryProfile).upsert(profile)
 
 
+def _build_live_search_preview(query: str, principal: Principal) -> FisheryProfile | None:
+    try:
+        report = VenueIntelligenceService().lookup(query)
+    except ValueError:
+        return None
+    if not _has_live_anglingai_research(report):
+        return None
+    return _build_profile_from_report(report, principal)
+
+
 @router.post("/from-venue-intelligence", response_model=FisheryProfile, status_code=status.HTTP_201_CREATED)
 def create_profile_from_venue_intelligence(
     query: str = Query(..., min_length=2),
@@ -386,4 +396,9 @@ def search_catalogue(
         ).lower()
         return normalized in haystack
 
-    return sorted([item for item in owned if matches(item)], key=lambda item: item.display_name.lower())
+    matches_owned = sorted([item for item in owned if matches(item)], key=lambda item: item.display_name.lower())
+    if matches_owned:
+        return matches_owned
+
+    live_preview = _build_live_search_preview(query, principal)
+    return [live_preview] if live_preview is not None else []

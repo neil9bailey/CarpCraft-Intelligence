@@ -223,6 +223,31 @@ def test_fishery_catalogue_seed_and_search_are_private(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+def test_fishery_catalogue_search_returns_live_preview_without_persisting(monkeypatch) -> None:
+    _enable_live_anglingai(monkeypatch)
+    monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
+
+    with sqlite_client() as client:
+        search_response = client.get(
+            "/api/v1/fishery-profiles/catalogue/search?query=Linear%20Fisheries",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+        empty_search_response = client.get(
+            "/api/v1/fishery-profiles/catalogue/search",
+            headers={"X-CarpCraft-User-Id": "angler-a"},
+        )
+
+        assert search_response.status_code == 200
+        profiles = search_response.json()
+        assert [profile["display_name"] for profile in profiles] == ["Linear Fisheries Oxford"]
+        assert profiles[0]["owner_user_id"] == "angler-a"
+        assert any(source["source_name"] == "AnglingAI" for source in profiles[0]["sources"])
+        assert empty_search_response.status_code == 200
+        assert empty_search_response.json() == []
+
+    get_settings.cache_clear()
+
+
 def test_fishery_catalogue_static_seed_cleanup_removes_source_pack_profiles(monkeypatch) -> None:
     _enable_live_anglingai(monkeypatch)
     monkeypatch.setattr(VenueIntelligenceService, "_weather_for_venue", lambda self, venue: None)
